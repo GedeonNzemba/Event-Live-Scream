@@ -1,0 +1,15 @@
+{
+  "name": "elongo-presence-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Simulation of Elongo's resilient capture pipeline: adaptive ladder, power budgeting and store-and-forward delivery over Congolese network conditions.",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "demo": "node src/cli.ts",
+    "demo:all": "node src/cli.ts --all",
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}
