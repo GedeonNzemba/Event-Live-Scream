@@ -67,6 +67,11 @@ pool and your own player skin.
 
 ### Two things worth knowing here
 
+**If you cannot get the WhatsApp API at all**, which is the case in many countries, none of
+this stalls: sharing works through the share sheet for free, notifications move to push once
+the apps exist, and correspondents are reached by SMS via Africa's Talking at roughly
+€0.01–0.02 a message. See [document 12](./12-mobile-apps.md).
+
 **WhatsApp is cheaper than people expect.** Meta made service conversations free when the
 *customer* messages first — and in our model they always do, because booking starts with them
 messaging us. You pay only for proactive template messages: confirmations, the 48-hour and

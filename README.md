@@ -135,6 +135,7 @@ Read in order; each one assumes the previous.
 | 08 | [Risks](docs/08-risks.md) | What kills this business, and what to do about it |
 | 09 | [Platforms & clients](docs/09-platforms-and-clients.md) | Why the stream is ours, what we rent, and what people watch it on |
 | 10 | [Stack & costs](docs/10-stack-and-costs.md) | The technology, and what you pay for it month by month |
+| 12 | [Mobile apps](docs/12-mobile-apps.md) | The Android and iOS build plan, the design system, and why WhatsApp is not blocking |
 
 Plus **[TESTING.md](TESTING.md)** — an honest inventory of what is and is not built, how to
 run all of it, and how to try to prove the claims wrong.

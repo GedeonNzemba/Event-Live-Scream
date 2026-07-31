@@ -198,6 +198,18 @@ Implemented as **iOS Universal Links** and **Android App Links** — the same `h
 which opens the app when installed and the browser when not. Never a custom `elongo://`
 scheme, which breaks when shared, and never an interstitial "do you have the app?" page.
 
+### If the WhatsApp Business API is unavailable to you
+
+It is in many countries, and it does not block any of this. **Sharing a link into a family
+group has never needed the API** — that is the operating system's share sheet, free and
+universal. The API only sends *automated* messages, and once native apps exist, push
+notifications do that job better and for nothing. Correspondents in Congo are reachable by SMS
+through [Africa's Talking](https://africastalking.com/sms/bulksms), which covers
+Congo-Brazzaville.
+
+If you want the API later, it is reached through a Business Solution Provider rather than
+Meta directly. Full reasoning in [document 12](./12-mobile-apps.md).
+
 Three rules that matter because the link travels through WhatsApp:
 
 1. **It must never dead-end.** If someone forwards it to an aunt without the app, she

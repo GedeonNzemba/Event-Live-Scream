@@ -57,6 +57,20 @@ something. Those messages carry a TTL and are dropped, not retried forever.
 **A missing token falls back to dry-run rather than throwing.** At three in the morning
 during somebody's funeral, printing to a console beats crashing.
 
+## If Meta will not give you API access
+
+Signup is closed in many countries, and it blocks nothing. Sharing a pool link into a family
+group is the OS share sheet — free, universal, no API. Proactive messages move to **push
+notifications** once the native apps exist ([docs/12](../docs/12-mobile-apps.md)), and
+correspondents in Congo are reachable by **SMS via
+[Africa's Talking](https://africastalking.com/sms/bulksms)**, which covers Congo-Brazzaville
+at roughly €0.01–0.02 a message and is far cheaper than Twilio there.
+
+If you want WhatsApp later, go through a **Business Solution Provider** — 360dialog, Gupshup,
+Infobip, or Arkesel for Africa — rather than Meta directly. The templates in
+`src/templates.ts` are already in the shape a BSP will ask for, and the driver interface in
+`src/drivers.ts` takes a new implementation without touching anything else.
+
 ## Going live
 
 Nothing here has touched the real Meta API — there are no credentials in this repository, and
