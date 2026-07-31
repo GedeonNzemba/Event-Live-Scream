@@ -1,0 +1,14 @@
+{
+  "name": "elongo-notify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "WhatsApp message templates, delivery drivers and an outbox with retry, deduplication and spend tracking.",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "demo": "node src/cli.ts",
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}

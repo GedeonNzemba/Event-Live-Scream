@@ -65,7 +65,7 @@ if (major < 22 || (major === 22 && minor < 18)) {
   process.exit(1);
 }
 
-for (const dir of ["prototype", "pool", "app", "media"]) {
+for (const dir of ["prototype", "pool", "app", "media", "notify"]) {
   if (!existsSync(join(root, dir))) {
     console.error(red(`\n  Missing directory: ${dir}\n`));
     process.exit(1);
@@ -83,6 +83,9 @@ check("app: booking, pool and escaping", "app", ["--test", "test/app.test.ts"], 
   expectOut: /# fail 0/,
 });
 check("media: ingest, tokens and completeness", "media", ["--test", "test/media.test.ts"], {
+  expectOut: /# fail 0/,
+});
+check("notify: templates, phones and outbox", "notify", ["--test", "test/notify.test.ts"], {
   expectOut: /# fail 0/,
 });
 
@@ -105,6 +108,7 @@ console.log(bold("\n  Money model"));
 check("fees report", "pool", ["src/cli.ts", "fees"], { expectOut: /per new/ });
 check("pool lifecycle", "pool", ["src/cli.ts", "lifecycle"], { expectOut: /charged to the booker/ });
 check("growth model", "pool", ["src/cli.ts", "growth"], { expectOut: /roadmap gate/ });
+check("message journey", "notify", ["src/cli.ts"], { expectOut: /coût estimé/ });
 
 console.log(bold("\n  Error handling"));
 check("rejects unknown link profile", "prototype", ["src/cli.ts", "made-up-profile"], {
