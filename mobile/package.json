@@ -13,6 +13,9 @@
     "test": "node --test \"packages/*/test/**/*.test.ts\"",
     "correspondent": "npm run start --workspace @elongo/correspondent",
     "viewer": "npm run start --workspace @elongo/viewer",
-    "doctor": "npx expo-doctor"
+    "doctor": "npx expo-doctor",
+    "fonts": "node scripts/fetch-fonts.mjs",
+    "ios": "npm run ios --workspace @elongo/viewer",
+    "android": "npm run android --workspace @elongo/correspondent"
   }
 }

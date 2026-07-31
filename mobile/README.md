@@ -49,28 +49,57 @@ This distinction matters more than the file listing, so it comes first.
 
 ## Running it
 
-```bash
-cd mobile
-npm install
-npm test                 # the part that works today
+**Run Expo from `mobile/apps/viewer` or `mobile/apps/correspondent` — never from
+the repository root and never from `app/`.** The repository's top-level `app/`
+directory is the server-rendered booking site, a plain Node HTTP server. It has
+a `package.json`, so the Expo CLI will happily start there, find no `main`, fall
+back to its legacy entry point and fail with:
+
+```
+Unable to resolve module ./node_modules/expo/AppEntry from .../Event-Live-Scream/app/.
 ```
 
-For the apps, on your own machine:
+That error means "wrong directory", nothing more.
 
 ```bash
-# 1. Fonts — five files, see apps/*/assets/fonts/README.md
-# 2. Reconcile versions against the installed Expo SDK
-cd apps/correspondent && npx expo install --check
+cd mobile
+npm install       # workspaces root: installs both apps and all three packages
+npm run fonts     # downloads the three typefaces — required, see below
+npm test          # 108 tests, the part that works today
+```
 
-# 3. A development build. Expo Go cannot load VisionCamera or expo-sqlite,
-#    so it is not part of this project at all.
-npx expo prebuild --platform android --clean
-npx expo run:android
+Then, per app:
 
-# 4. Point the app at the media service running on your machine.
-#    10.0.2.2 is the host as seen from an emulator; a real handset needs your
-#    LAN address, and a real handset is the only configuration that proves
-#    anything — the emulator has your laptop's fibre.
+```bash
+cd apps/viewer            # iOS + Android
+# or
+cd apps/correspondent     # Android only
+
+npx expo install --check  # reconcile the offline version guesses with your SDK
+npx expo run:ios          # a development build — see below
+```
+
+**`npm run fonts` is not optional.** `_layout.tsx` requires the five font files
+by path and Metro resolves that at bundle time, so a missing file gives you the
+same *Unable to resolve module* error before a line of the app runs. The files
+are gitignored because they are third-party binaries; the script fetches
+Fraunces and JetBrains Mono from Google Fonts and Switzer from Fontshare, and
+substitutes Archivo if Fontshare's endpoint has moved so a typeface can never be
+what stops you starting. `--fallback` forces the substitute.
+
+**Expo Go is not part of this project.** The viewer needs `expo-video` and Skia;
+the correspondent needs VisionCamera and `expo-sqlite`. None of them exist in
+Expo Go, so `expo run:ios` / `expo run:android` — which build a development
+client — are the only entry points.
+
+Point the app at the media service on your machine:
+
+```bash
+cd .. && npm run media   # http://localhost:3100
+
+# Simulator/emulator can reach the host directly; a real handset needs the LAN
+# address, and a real handset is the only configuration that proves anything —
+# the simulator has your laptop's fibre.
 EXPO_PUBLIC_MEDIA_URL=http://192.168.1.20:3100 npx expo start --dev-client
 ```
 
