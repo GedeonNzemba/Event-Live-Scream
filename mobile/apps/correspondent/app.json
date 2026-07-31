@@ -7,7 +7,9 @@
     "orientation": "default",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "android": {
       "package": "cd.elongo.correspondent",
       "edgeToEdgeEnabled": true,
@@ -41,9 +43,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "mediaBaseUrl": "http://10.0.2.2:3100"
     }
   }
 }

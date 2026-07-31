@@ -7,31 +7,61 @@
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "ios": {
       "bundleIdentifier": "cd.elongo.viewer",
       "supportsTablet": true,
-      "associatedDomains": ["applinks:elongo.cd"],
+      "associatedDomains": [
+        "applinks:elongo.cd"
+      ],
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ],
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        },
+        "NSLocalNetworkUsageDescription": "Elongo se connecte au serveur de test sur votre réseau local pendant le développement."
       }
     },
     "android": {
       "package": "cd.elongo.viewer",
       "edgeToEdgeEnabled": true,
-      "adaptiveIcon": { "backgroundColor": "#0B1620" },
+      "adaptiveIcon": {
+        "backgroundColor": "#0B1620"
+      },
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "https", "host": "elongo.cd", "pathPrefix": "/p" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "https",
+              "host": "elongo.cd",
+              "pathPrefix": "/p"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
-      "permissions": ["android.permission.POST_NOTIFICATIONS"]
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
-    "plugins": ["expo-router", "expo-font", "expo-video", "expo-notifications"],
-    "experiments": { "typedRoutes": true },
-    "extra": { "mediaBaseUrl": "http://10.0.2.2:3100" }
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-video",
+      "expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
