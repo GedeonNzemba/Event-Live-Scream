@@ -103,10 +103,40 @@ reference without a remux. Production adds fMP4 plus HLS alongside — CDNs cach
 televisions speak it natively — and the manifest shape is deliberately close to a playlist so
 that swap is mechanical.
 
-## Not built
+## What still needs work
 
-- **Talk mode.** The request button exists and says so plainly; the SFU and signalling do not.
-- **Transcode and the highlight reel.** Segments are stored as captured.
-- **Dual-SIM bonding.** Needs the native client.
-- **Object storage and a CDN.** Files on disk; the interface is the same shape (docs/10).
-- **Viewer list.** The player shows a placeholder.
+Ordered by how much it matters, not by how hard it is. Everything here is known and none of
+it is hidden behind a "coming soon".
+
+**1. The audio floor is captured but never played.** The `a` track is recorded, uploaded and
+counted toward completeness — but the player only ever plays the video track. So when the
+ladder drops to audio-only, a viewer gets a held frame and *silence*, when the entire promise
+in [docs/01](../docs/01-problem.md) is that they should still hear the wedding. This is the
+largest gap in the media stack and it undercuts the core claim. Fixing it means a second
+MediaSource for audio and a switch when the video track has a hole.
+
+**2. Video quality is fixed at 900 kbps and cannot adapt.** `MediaRecorder` will not change
+bitrate once started, so on a good connection the picture is worse than the link deserves,
+and on a bad one it wastes the data bundle we paid for. There is no way around this in a
+browser. **This is the case for the native Android app**, and it should be measured on real
+events before that is built.
+
+**3. No download.** A family that paid for a recording should be able to keep a file. Right
+now they can only stream it, which is not what "the family keeps it forever" means.
+
+**4. The player buffers the whole event.** Fine for twenty minutes, wrong for a three-hour
+ceremony — it will hit the browser's buffer quota. Needs a sliding window with re-fetch on
+seek; the eviction path exists but is not exercised.
+
+**5. Talk mode.** The button is now hidden on recordings, where it was meaningless. On a live
+event it is still a stub that says so.
+
+**6. No transcode.** Segments are served exactly as captured, so every viewer downloads the
+correspondent's full bitrate regardless of their own connection.
+
+**7. Nothing is authenticated except viewer tokens.** `/dev/*` must not exist in production,
+and there is no correspondent login — the capture key is the only credential.
+
+Also outstanding: dual-SIM bonding (needs the native client), object storage and a CDN (files
+on disk today; the interface is the same shape — [docs/10](../docs/10-stack-and-costs.md)),
+the highlight reel, and the viewer list, which the player shows as a placeholder.

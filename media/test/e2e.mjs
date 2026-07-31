@@ -230,6 +230,20 @@ try {
     console.log("  player errors:", playErrors.join(" | ") || "(none)");
   }
 
+  // A finished recording must open at the beginning. Parking the playhead at
+  // the live edge gave the viewer the last two seconds and an ending.
+  const opened = await play.evaluate(() => ({
+    t: document.getElementById("video").currentTime,
+    follow: window.__elongo.followLive,
+    talkHidden: document.getElementById("talk").hidden,
+    liveHidden: document.getElementById("live").hidden,
+  }));
+  check("a recording opens at the beginning, not the end", opened.t < 2 && !opened.follow,
+    `t=${opened.t.toFixed(1)}s`);
+  check("live-only controls are hidden on a recording",
+    opened.talkHidden && opened.liveHidden,
+    `parler ${opened.talkHidden ? "hidden" : "SHOWN"}, direct ${opened.liveHidden ? "hidden" : "SHOWN"}`);
+
   await play.click("#playPause");
   await play.waitForFunction(
     () => {

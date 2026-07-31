@@ -60,6 +60,7 @@ const state = {
   queue: [],
   appending: false,
   followLive: true,
+  initialised: false,
   started: false,
   scrubbing: false,
 };
@@ -276,6 +277,19 @@ const RUNG_LABEL = [
 function renderStatus(manifest) {
   const nothingYet = state.timeline.length === 0;
 
+  // A <video> with no decoded frame is just a black rectangle, and a black
+  // rectangle with no caption reads as "broken". Say what is happening until
+  // there is a picture to show.
+  //   0 HAVE_NOTHING · 1 HAVE_METADATA · 2 HAVE_CURRENT_DATA
+  if (!nothingYet && el.video.readyState < 2) {
+    el.overlay.classList.add("show");
+    el.overlayTitle.textContent = "Chargement…";
+    el.overlaySub.textContent = manifest.live
+      ? "Réception du direct depuis Brazzaville."
+      : `Préparation de l'enregistrement — ${mmss(manifest.completeness.capturedSec)}.`;
+    return;
+  }
+
   if (nothingYet) {
     const waiting = manifest.state === "scheduled" || manifest.status.tone === "buffering";
     el.status.className = `tone-${manifest.status.tone}`;
@@ -383,11 +397,29 @@ function renderSeek() {
   if (!state.scrubbing) el.seek.value = String(Math.floor(el.video.currentTime));
   el.clock.textContent = `${mmss(el.video.currentTime)} / ${mmss(end)}`;
 
-  // Following the live edge means staying near the end of what has arrived.
-  if (state.followLive && !el.video.paused && end - el.video.currentTime > 6) {
+  // Following the live edge only means anything while there IS a live edge.
+  // Applying it to a finished recording parked the playhead at 98% before the
+  // viewer had watched a second of it: pressing play gave them the last two
+  // seconds and an ending.
+  const isLive = state.manifest?.live === true;
+  if (isLive && state.followLive && !el.video.paused && end - el.video.currentTime > 6) {
     el.video.currentTime = Math.max(0, end - 1.5);
   }
   el.live.disabled = state.followLive;
+}
+
+/**
+ * Shows only the controls that mean something for what is being watched.
+ *
+ * A finished recording has no live edge to return to, and nobody to speak to —
+ * the ceremony ended hours ago. Offering "Parler" there is not a harmless extra
+ * button; it promises something the product cannot do.
+ */
+function renderControls(manifest) {
+  const isLive = manifest.live === true;
+  el.talk.hidden = !isLive;
+  el.live.hidden = !isLive;
+  el.viewers.hidden = !isLive;
 }
 
 // ------------------------------------------------------------------- loop ---
@@ -396,6 +428,13 @@ async function tick() {
   try {
     const manifest = await fetchManifest();
     state.manifest = manifest;
+
+    if (!state.initialised) {
+      state.initialised = true;
+      // A recording starts at the beginning. Only a live stream starts at the end.
+      state.followLive = manifest.live === true;
+    }
+    renderControls(manifest);
 
     el.title.textContent = manifest.eventName;
     el.when.textContent = manifest.live
@@ -441,6 +480,11 @@ async function tick() {
 el.playPause.addEventListener("click", async () => {
   if (el.video.paused) {
     try {
+      // Pressing play on a finished recording should replay it, not sit at the
+      // end doing nothing.
+      if (el.video.ended || el.video.currentTime >= el.video.duration - 0.3) {
+        el.video.currentTime = 0;
+      }
       await el.video.play();
       state.started = true;
       el.playPause.textContent = "Pause";
