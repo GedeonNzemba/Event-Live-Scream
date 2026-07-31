@@ -2,9 +2,9 @@
 
 ## First, the honest inventory
 
-Before you spend time testing, know what you are testing. **Almost none of the product is
-built.** What exists is a strategy and two runnable models of the parts that carry the most
-risk.
+Before you spend time testing, know what you are testing. Most of the product now runs —
+booking, capture, archive, playback and messaging — but **money and live WhatsApp delivery
+are deliberately still simulated.**
 
 | | Status |
 | --- | --- |
@@ -42,7 +42,7 @@ and Node 24 are both known to work. Check with `node --version`.
 npm run verify
 ```
 
-That runs both test suites, every CLI entry point and the error paths, and prints a single
+That runs all five test suites, every CLI entry point and the error paths, and prints a single
 pass/fail. It takes about 30 seconds, most of it simulating three-hour weddings.
 
 If it passes, everything in this repository that can run, runs on your machine.
@@ -50,7 +50,7 @@ If it passes, everything in this repository that can run, runs on your machine.
 ## Run the pieces individually
 
 ```bash
-npm test                # both test suites
+npm test                # all five test suites
 npm run demo            # the wedding simulation, then the money reports
 npm run demo:network    # all five link profiles side by side
 npm run demo:money      # fees, lifecycle and growth
