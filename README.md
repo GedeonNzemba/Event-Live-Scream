@@ -70,9 +70,14 @@ plus a blackout across the speeches — the family hears 89% of the event live a
 recording at all.
 
 ```bash
-cd prototype && npm test        # the guarantees, as assertions
+npm run verify                  # everything: both suites, every CLI, the error paths
 cd prototype && npm run demo    # simulate a 3-hour wedding on a bad link
 ```
+
+**What is built:** the strategy, and two runnable models of the parts that carry the risk.
+There is no app, no backend, no player and no payments yet — deliberately, because the most
+expensive mistake available right now is building a year of product before finding out
+whether ten families will pay €25. [TESTING.md](TESTING.md) has the full inventory.
 
 ## The commercial bet
 
@@ -105,6 +110,10 @@ Read in order; each one assumes the previous.
 | 07 | [Roadmap & validation](docs/07-roadmap-and-validation.md) | What to build when, and how to test the thesis in 30 days for under €500 |
 | 08 | [Risks](docs/08-risks.md) | What kills this business, and what to do about it |
 | 09 | [Platforms & clients](docs/09-platforms-and-clients.md) | Why the stream is ours, what we rent, and what people watch it on |
+| 10 | [Stack & costs](docs/10-stack-and-costs.md) | The technology, and what you pay for it month by month |
+
+Plus **[TESTING.md](TESTING.md)** — an honest inventory of what is and is not built, how to
+run all of it, and how to try to prove the claims wrong.
 
 ## Where to start tomorrow
 

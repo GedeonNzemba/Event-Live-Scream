@@ -365,12 +365,25 @@ function growthReport(): void {
 // ---------------------------------------------------------------- main ----
 
 const which = process.argv[2] ?? "all";
-if (which === "fees") feesReport();
-else if (which === "lifecycle") lifecycleReport();
-else if (which === "growth") growthReport();
-else {
+const REPORTS: Record<string, () => void> = {
+  fees: feesReport,
+  lifecycle: lifecycleReport,
+  growth: growthReport,
+};
+
+if (which === "all") {
   feesReport();
   lifecycleReport();
   growthReport();
+} else if (REPORTS[which]) {
+  REPORTS[which]();
+} else {
+  console.error(`\n  Unknown report "${which}".\n`);
+  console.error("  Available:");
+  console.error("    fees        does splitting the bill destroy the margin?");
+  console.error("    lifecycle   a pool from creation to delivery, shortfall included");
+  console.error("    growth      what the pool is worth as an acquisition channel");
+  console.error("    all         all three (the default)\n");
+  process.exit(1);
 }
 console.log("");

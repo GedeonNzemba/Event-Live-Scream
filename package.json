@@ -1,0 +1,16 @@
+{
+  "name": "elongo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Presence-as-a-service for the African diaspora. Strategy, and two runnable models of the parts that carry the risk.",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "npm --prefix prototype test && npm --prefix pool test",
+    "demo": "npm --prefix prototype run demo && npm --prefix pool run demo",
+    "demo:network": "npm --prefix prototype run demo:all",
+    "demo:money": "npm --prefix pool run demo",
+    "verify": "node scripts/verify.mjs"
+  }
+}

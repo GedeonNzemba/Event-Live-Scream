@@ -89,7 +89,26 @@ if (flags.has("all")) {
 }
 
 const profileId = positional[0] ?? "wedding-worst-case";
-const profile = getProfile(profileId);
+let profile;
+try {
+  profile = getProfile(profileId);
+} catch {
+  console.error(`\n  Unknown link profile "${profileId}".\n`);
+  console.error("  Available:");
+  for (const p of Object.values(PROFILES)) console.error(`    ${p.id.padEnd(22)} ${p.label}`);
+  console.error("\n  Run with --list for descriptions.\n");
+  process.exit(1);
+}
+
+if (!Number.isFinite(hours) || hours <= 0) {
+  console.error("\n  --hours must be a positive number.\n");
+  process.exit(1);
+}
+if (!Number.isFinite(battery) || battery <= 0 || battery > 100) {
+  console.error("\n  --battery must be between 1 and 100.\n");
+  process.exit(1);
+}
+
 const config = configFor(profileId, Math.round(hours * 3600));
 
 const result = runSession(config, profile);
