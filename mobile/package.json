@@ -16,6 +16,7 @@
     "doctor": "node scripts/doctor.mjs",
     "fonts": "node scripts/fetch-fonts.mjs",
     "ios": "npm run ios --workspace @elongo/viewer",
-    "android": "npm run android --workspace @elongo/correspondent"
+    "android": "npm run android --workspace @elongo/correspondent",
+    "setup": "npm install && npm run fonts && npm run doctor"
   }
 }

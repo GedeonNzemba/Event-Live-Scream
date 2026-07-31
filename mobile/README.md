@@ -63,10 +63,21 @@ That error means "wrong directory", nothing more.
 
 ```bash
 cd mobile
-npm install       # workspaces root: installs both apps and all three packages
-npm run fonts     # downloads the three typefaces — required, see below
+npm run setup     # install + fonts + doctor, in that order
 npm test          # 108 tests, the part that works today
 ```
+
+`npm run setup` must run **from `mobile/`**. Running `npm install` at the
+repository root instead installs nothing useful — the root `package.json` has no
+dependencies — and running it inside an app directory fights the workspace. In
+both cases you end up with no `mobile/node_modules`, and the failure is quiet in
+the worst possible way: npx then walks up past the repository and runs an Expo
+CLI from somewhere else on your machine, usually `~/node_modules`. Every error
+after that names paths belonging to an unrelated project.
+
+`npm run doctor` exists to catch exactly that. Its most useful line reports
+which `expo` binary npx would actually run; if that path is not inside this
+repository, nothing else in the output matters until it is.
 
 Then, per app:
 

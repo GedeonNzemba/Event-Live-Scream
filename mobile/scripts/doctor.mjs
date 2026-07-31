@@ -85,17 +85,50 @@ if (!existsSync(localModules)) {
   ok("expo installed locally", `v${version}`);
 }
 
-// The binary npx will actually pick. If this resolves outside the repository,
-// every subsequent error will name paths that have nothing to do with the code.
-const binary = join(localModules, ".bin", "expo");
-if (existsSync(localModules) && !existsSync(binary)) {
-  bad(
-    "expo CLI on the local path",
-    "mobile/node_modules/.bin/expo missing",
-    "npx will fall back to a global or ancestor install. Reinstall from mobile/.",
-  );
-} else if (existsSync(binary)) {
-  ok("expo CLI on the local path", "mobile/node_modules/.bin/expo");
+/**
+ * Which `expo` binary will npx actually run?
+ *
+ * npx walks node_modules/.bin from the working directory upward and takes the
+ * first hit. If that first hit is outside the repository, every subsequent
+ * error names paths belonging to some unrelated project — which is precisely
+ * how "Cannot find module 'react-native-worklets/plugin'" ends up printing
+ * fourteen lines of /Users/<you>/node_modules/... and sending you looking for a
+ * bug in Expo rather than a missing install here.
+ *
+ * This is the single most diagnostic line in the whole script, so it names the
+ * real path rather than a yes/no.
+ */
+function resolveExpoBinaryLike(startDir) {
+  let dir = startDir;
+  for (;;) {
+    const candidate = join(dir, "node_modules", ".bin", "expo");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+for (const app of ["correspondent", "viewer"]) {
+  const from = join(root, "apps", app);
+  const picked = resolveExpoBinaryLike(from);
+  if (!picked) {
+    bad(
+      `${app}: expo CLI npx would run`,
+      "none found anywhere",
+      "Run `npm install` from mobile/.",
+    );
+  } else if (!picked.startsWith(repo + sep)) {
+    bad(
+      `${app}: expo CLI npx would run`,
+      picked.replace(homedir(), "~"),
+      `npx would run an Expo from OUTSIDE this repository (${picked.replace(homedir(), "~")}). ` +
+        "Every error it prints will name that project's paths. Run `npm install` from mobile/, " +
+        "then re-run doctor and confirm this line points inside the repo.",
+    );
+  } else {
+    ok(`${app}: expo CLI npx would run`, picked.slice(repo.length + 1));
+  }
 }
 
 // --- 3. Nothing above us is shadowing it ----------------------------------
