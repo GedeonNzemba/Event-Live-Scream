@@ -26,6 +26,8 @@
 // ------------------------------------------------------------------ config --
 
 const SEGMENT_MS = 2000;
+/** Content younger than this is the live edge; older is backfill. */
+const LIVE_WINDOW_SEC = 15;
 const PROGRESS_MS = 3000;
 const RECONCILE_MS = 15000;
 
@@ -55,6 +57,8 @@ const el = {
   statCaptured: $("statCaptured"), statSent: $("statSent"), statBacklog: $("statBacklog"),
   statBattery: $("statBattery"), statUplink: $("statUplink"), statComplete: $("statComplete"),
   simOffline: $("simOffline"), simSlow: $("simSlow"), error: $("error"),
+  donePanel: $("donePanel"), doneTitle: $("doneTitle"), doneStatus: $("doneStatus"),
+  doneMeter: $("doneMeter"), doneLink: $("doneLink"),
 };
 
 function fail(message) {
@@ -138,6 +142,8 @@ const state = {
   uploading: false,
   completeness: null,
   stableSec: 0,
+  viewerLink: "",
+  finishing: false,
 };
 
 // --------------------------------------------------------------- recording --
@@ -246,19 +252,98 @@ async function onChunk(track, blob) {
   });
 }
 
-function stopCapture() {
-  state.running = false;
+async function stopCapture() {
+  // Order matters: stop the recorders first so their final chunks are captured,
+  // and only then leave the running state. Flipping `running` first raced the
+  // upload loop into exiting before the last seconds were stored.
   videoRecorder?.stop();
   audioRecorder?.stop();
+  await new Promise((r) => setTimeout(r, 400));
+
+  state.running = false;
+  state.finishing = true;
   stream?.getTracks().forEach((t) => t.stop());
   el.stop.disabled = true;
   el.pause.disabled = true;
   el.start.disabled = false;
 
-  fetch(`/ingest/${encodeURIComponent(state.presenceId)}/close`, {
-    method: "POST",
-    headers: { "x-elongo-key": state.captureKey },
-  }).catch(() => {});
+  el.donePanel.hidden = false;
+  await ensureViewerLink();
+  drainLoop();
+}
+
+/**
+ * After the camera stops, the upload has not.
+ *
+ * The correspondent needs to see the backlog draining and be told when it is
+ * safe to close the page — otherwise "Terminer" looks like it did nothing,
+ * which is exactly what it looked like.
+ */
+async function drainLoop() {
+  while (state.finishing) {
+    let done = null;
+    try {
+      const res = await fetch(`/ingest/${encodeURIComponent(state.presenceId)}/status`, {
+        headers: { "x-elongo-key": state.captureKey },
+      });
+      if (res.ok) {
+        const status = await res.json();
+        state.completeness = status.completeness;
+        done = status.completeness.overallRatio;
+      }
+    } catch {
+      /* offline; keep trying */
+    }
+
+    const outstanding = state.backlogCount;
+    const pct = done === null ? null : Math.round(done * 100);
+
+    if (outstanding === 0 && done !== null && done >= 1) {
+      el.doneTitle.textContent = "Envoi terminé";
+      el.doneStatus.textContent =
+        `L'enregistrement complet est arrivé — ${mmss(state.capturedSec)}. ` +
+        `Vous pouvez fermer cette page.`;
+      el.doneMeter.innerHTML = '<i class="have" style="width:100%"></i>';
+      state.finishing = false;
+      render();
+      return;
+    }
+
+    el.doneTitle.textContent = "Envoi en cours…";
+    el.doneStatus.textContent =
+      `${outstanding} morceau${outstanding === 1 ? "" : "x"} en attente` +
+      (pct === null ? "" : ` · ${pct} % reçu`) +
+      ". Rien n'est perdu — tout est déjà enregistré sur le téléphone.";
+    el.doneMeter.innerHTML =
+      `<i class="have" style="width:${pct ?? 0}%"></i>` +
+      `<i class="gap" style="width:${100 - (pct ?? 0)}%"></i>`;
+
+    render();
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
+/** The link the family would receive. In production this comes from booking. */
+async function ensureViewerLink() {
+  if (!state.viewerLink) {
+    try {
+      const res = await fetch(`/dev/token?id=${encodeURIComponent(state.presenceId)}`);
+      if (res.ok) {
+        const { token } = await res.json();
+        state.viewerLink =
+          `${location.origin}/player.html?id=${encodeURIComponent(state.presenceId)}` +
+          `&t=${encodeURIComponent(token)}`;
+      }
+    } catch {
+      /* leave it blank rather than showing a broken link */
+    }
+  }
+  if (state.viewerLink) {
+    el.doneLink.href = state.viewerLink;
+    el.doneLink.hidden = false;
+  } else {
+    el.doneLink.hidden = true;
+  }
 }
 
 // ---------------------------------------------------------------- uploader --
@@ -274,13 +359,13 @@ async function sha256Hex(buffer) {
  * repairing a twenty-minute-old gap never damages the stream happening now.
  */
 function priority(seg, nowSec) {
-  const live = nowSec - seg.capturedAt <= 15;
+  const live = nowSec - seg.capturedAt <= LIVE_WINDOW_SEC;
   if (seg.track === "a") return live ? 0 : 2;
   return live ? 1 : 3;
 }
 
 async function uploadLoop() {
-  while (state.running || state.backlogCount > 0) {
+  while (state.running || state.finishing || state.backlogCount > 0) {
     if (state.uploading) return;
     state.uploading = true;
     try {
@@ -310,12 +395,24 @@ async function uploadPass() {
   const nowSec = Math.floor((Date.now() - state.startedAtMs) / 1000);
   pending.sort((a, b) => priority(a, nowSec) - priority(b, nowSec) || a.capturedAt - b.capturedAt);
 
-  const videoAllowed = RUNGS[state.rung].video && !el.simSlow.checked;
+  // Two different reasons video might not go, and they are not the same thing:
+  //
+  //   audioOnlyLink  the link genuinely cannot carry video at all, so nothing
+  //                  video-shaped moves, live or backfill.
+  //   liveVideoHeld  the ladder is holding the live picture back, but backfill
+  //                  still flows on whatever capacity the live edge left.
+  //
+  // Conflating them is what deadlocked the client: at the buffered rung no
+  // video was sent at all, so the video backlog never drained, so the backlog
+  // stayed deep, so the ladder never left the buffered rung.
+  const audioOnlyLink = el.simSlow.checked;
+  const liveVideoHeld = !RUNGS[state.rung].video;
   let sentBytes = 0;
   const started = Date.now();
 
   for (const seg of pending.slice(0, 12)) {
-    if (seg.track === "v" && !videoAllowed) continue;
+    const isLive = nowSec - seg.capturedAt <= LIVE_WINDOW_SEC;
+    if (seg.track === "v" && (audioOnlyLink || (isLive && liveVideoHeld))) continue;
     const buffer = await seg.blob.arrayBuffer();
     const res = await fetch(
       `/ingest/${encodeURIComponent(state.presenceId)}/${seg.track}/${seg.seq}`,
@@ -373,8 +470,17 @@ function updateLadder(kbps, queueLimited, pending) {
   }
 
   const nowSec = Math.floor((Date.now() - state.startedAtMs) / 1000);
-  const oldest = pending.reduce((min, s) => Math.min(min, s.capturedAt), nowSec);
-  const backlogSec = nowSec - oldest;
+
+  // Only the LIVE edge counts toward congestion. An hour of historical backlog
+  // draining in the background is not a reason to degrade the picture happening
+  // right now — and measuring it here is what pinned the ladder at the buffered
+  // rung permanently after any outage, because the backlog is by definition old.
+  //
+  // prototype/src/pipeline/store.ts already knew this; this file did not.
+  const liveOldest = pending
+    .filter((s) => nowSec - s.capturedAt <= LIVE_WINDOW_SEC)
+    .reduce((min, s) => Math.min(min, s.capturedAt), nowSec);
+  const backlogSec = nowSec - liveOldest;
 
   if (el.simSlow.checked) return setRung(FLOOR);
 
@@ -385,8 +491,9 @@ function updateLadder(kbps, queueLimited, pending) {
     state.stableSec = 0;
   } else {
     state.stableSec += 1;
-    if (state.stableSec > 6 && state.rung > 0) {
-      // Climb only after sustained headroom, and never past what power allows.
+    if (state.stableSec > 3 && state.rung > 0) {
+      // Climb straight to the rung the link supports rather than one step at a
+      // time: after a blackout, stepping would take minutes to look recovered.
       const target = state.estimateKbps > 600 ? 1 : state.estimateKbps > 250 ? 3 : FLOOR;
       setRung(Math.max(target, powerCap()));
       state.stableSec = 0;
@@ -534,6 +641,7 @@ el.devCreate.addEventListener("click", async () => {
   const body = await res.json();
   el.captureKey.value = body.captureKey;
   const link = `${location.origin}/player.html?id=${encodeURIComponent(id)}&t=${encodeURIComponent(body.viewerToken)}`;
+  state.viewerLink = link;
   el.setupHint.innerHTML = `Lien pour la famille : <a href="${link}" target="_blank" rel="noopener">ouvrir le lecteur</a>`;
 });
 

@@ -133,8 +133,59 @@ try {
     `${recovered.sentCount} sent, ${recovered.backlogCount} outstanding`,
   );
 
+  // The ladder must actually leave the buffered rung once the link returns.
+  // It did not: backlog age was measured over all pending segments including
+  // backfill, which is old by definition, so the client stayed pinned at
+  // "network cut" for the rest of the event however good the network got.
+  await cap.waitForFunction(() => window.__elongoCapture.rung < 7, { timeout: 30000 })
+    .then(() => check("ladder leaves the buffered rung after recovery", true))
+    .catch(async () => {
+      const st = await cap.evaluate(() => ({ ...window.__elongoCapture }));
+      check("ladder leaves the buffered rung after recovery", false,
+        `stuck at rung ${st.rung}, backlog ${st.backlogCount}`);
+    });
+
+  const recoveredRung = await cap.evaluate(() => window.__elongoCapture.rung);
+  check("status stops saying the network is cut", recoveredRung < 7, `rung ${recoveredRung}`);
+
+  // ---- the slow-link mode -----------------------------------------------
+  // "Very slow network" means the link cannot carry video at all — not merely
+  // that the live picture is held back — so no video should move while it is on.
+  const videoBefore = await cap.evaluate(() => window.__elongoCapture.sentCount);
+  await cap.check("#simSlow");
+  await cap.waitForTimeout(7000);
+  const slow = await cap.evaluate(() => ({ ...window.__elongoCapture }));
+  check("slow link drops to the audio floor", slow.rung >= 6, `rung ${slow.rung}`);
+  check("audio still gets through on a slow link", slow.sentCount > videoBefore,
+    `${slow.sentCount - videoBefore} segments sent while degraded`);
+
+  await cap.uncheck("#simSlow");
+  await cap.waitForFunction(() => window.__elongoCapture.rung < 6, { timeout: 30000 })
+    .then(() => check("recovers from the slow link too", true))
+    .catch(async () => {
+      const st = await cap.evaluate(() => ({ ...window.__elongoCapture }));
+      check("recovers from the slow link too", false, `stuck at rung ${st.rung}`);
+    });
+
+  // ---- finishing --------------------------------------------------------
   await cap.click("#stop");
-  await cap.waitForTimeout(1200);
+
+  // Pressing Terminer must visibly do something: a panel, a draining backlog,
+  // and a link to watch what was just filmed.
+  await cap.waitForSelector("#donePanel:not([hidden])", { timeout: 10000 });
+  check("pressing Terminer shows what is happening", true);
+
+  await cap.waitForFunction(
+    () => document.getElementById("doneTitle")?.textContent?.includes("terminé"),
+    { timeout: 60000 },
+  );
+  const doneStatus = await cap.textContent("#doneStatus");
+  check("tells the correspondent when it is safe to close", /fermer cette page/i.test(doneStatus ?? ""),
+    (doneStatus ?? "").slice(0, 58));
+
+  const doneHref = await cap.getAttribute("#doneLink", "href");
+  check("offers a link to watch what was filmed", Boolean(doneHref && doneHref.includes("player.html")),
+    doneHref ? "player link present" : "no link");
 
   // ---- server-side truth ------------------------------------------------
   const tokenRes = await fetch(`${BASE}/dev/token?id=e2etest`);
