@@ -1,0 +1,12 @@
+{
+  "name": "@elongo/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Typed client for the media service. fetch is injected, so the retry and idempotency rules are testable without a network.",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}

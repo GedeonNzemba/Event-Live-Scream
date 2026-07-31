@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Elongo",
+    "slug": "elongo-viewer",
+    "scheme": "elongo",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "cd.elongo.viewer",
+      "supportsTablet": true,
+      "associatedDomains": ["applinks:elongo.cd"],
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
+    },
+    "android": {
+      "package": "cd.elongo.viewer",
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": { "backgroundColor": "#0B1620" },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "elongo.cd", "pathPrefix": "/p" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
+      "permissions": ["android.permission.POST_NOTIFICATIONS"]
+    },
+    "plugins": ["expo-router", "expo-font", "expo-video", "expo-notifications"],
+    "experiments": { "typedRoutes": true },
+    "extra": { "mediaBaseUrl": "http://10.0.2.2:3100" }
+  }
+}

@@ -1,3 +1,14 @@
 node_modules/
 *.log
 .DS_Store
+
+# Expo / React Native
+.expo/
+android/
+ios/
+*.keystore
+expo-env.d.ts
+
+# Third-party font binaries — see mobile/apps/*/assets/fonts/README.md
+mobile/apps/*/assets/fonts/*.ttf
+mobile/apps/*/assets/fonts/*.otf

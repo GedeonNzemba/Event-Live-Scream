@@ -1,0 +1,12 @@
+{
+  "name": "@elongo/design",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Design tokens, type scale, French formatting and the signal-ladder geometry. The geometry is pure so it can be tested without a renderer.",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}

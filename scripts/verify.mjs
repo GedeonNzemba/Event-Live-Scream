@@ -105,7 +105,7 @@ if (major < 22 || (major === 22 && minor < 18)) {
   process.exit(1);
 }
 
-for (const dir of ["prototype", "pool", "app", "media", "notify"]) {
+for (const dir of ["prototype", "pool", "app", "media", "notify", "mobile"]) {
   if (!existsSync(join(root, dir))) {
     console.error(red(`\n  Missing directory: ${dir}\n`));
     process.exit(1);
@@ -128,6 +128,21 @@ check("media: ingest, tokens and completeness", "media", ["--test", "test/media.
 check("notify: templates, phones, SMS and outbox", "notify", ["--test", "test/notify.test.ts", "test/sms.test.ts"], {
   isTest: true,
 });
+// The mobile packages only. The two Expo apps cannot be built here — no Android
+// SDK, no device — and `mobile/README.md` says so rather than implying otherwise.
+check(
+  "mobile: engine, design and API client",
+  "mobile",
+  [
+    "--test",
+    "packages/domain/test/domain.test.ts",
+    "packages/domain/test/engine.test.ts",
+    "packages/design/test/design.test.ts",
+    "packages/design/test/tailwind-sync.test.ts",
+    "packages/api/test/api.test.ts",
+  ],
+  { isTest: true },
+);
 
 console.log(bold("\n  Network simulation"));
 check("wedding worst case", "prototype", ["src/cli.ts"], {

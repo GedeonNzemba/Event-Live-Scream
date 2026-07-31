@@ -1,0 +1,12 @@
+{
+  "name": "@elongo/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Platform-free logic shared by both apps: the degradation ladder, the power budget and upload priority. No React, no React Native, no Node.",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}

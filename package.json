@@ -7,7 +7,7 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "test": "npm --prefix prototype test && npm --prefix pool test && npm --prefix app test && npm --prefix media test && npm --prefix notify test",
+    "test": "npm --prefix prototype test && npm --prefix pool test && npm --prefix app test && npm --prefix media test && npm --prefix notify test && npm --prefix mobile test",
     "demo": "npm --prefix prototype run demo && npm --prefix pool run demo",
     "demo:network": "npm --prefix prototype run demo:all",
     "demo:money": "npm --prefix pool run demo",
@@ -16,6 +16,7 @@
     "verify": "node scripts/verify.mjs",
     "media": "npm --prefix media start",
     "test:e2e": "npm --prefix media run test:e2e",
-    "demo:messages": "npm --prefix notify run demo"
+    "demo:messages": "npm --prefix notify run demo",
+    "mobile": "npm --prefix mobile test"
   }
 }
