@@ -74,6 +74,21 @@ cd prototype && npm test        # the guarantees, as assertions
 cd prototype && npm run demo    # simulate a 3-hour wedding on a bad link
 ```
 
+## The commercial bet
+
+One capture, many payers. A Congolese wedding has ten to fifty relatives abroad, and
+[`pool/`](./pool) models what happens when they split the bill instead of one person carrying
+it. Splitting nine ways genuinely costs about three times as much to process — and it
+introduces seven new relatives to the product at roughly **€0.50 each, against €20 to buy a
+customer with advertising.** Splitting a bill turns out not to be a cost to minimise but the
+cheapest acquisition channel the company has, arriving disguised as a payment-processing line
+item.
+
+```bash
+cd pool && npm test             # money arithmetic and the business rules
+cd pool && npm run demo         # fees, lifecycle and growth reports
+```
+
 ## The documents
 
 Read in order; each one assumes the previous.

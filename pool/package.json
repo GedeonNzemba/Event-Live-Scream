@@ -1,0 +1,17 @@
+{
+  "name": "elongo-family-pool",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The family pool: split-payment domain model, payment-rail fee engine, and the viral growth math that the business case in docs/03 depends on.",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "demo": "node src/cli.ts",
+    "fees": "node src/cli.ts fees",
+    "lifecycle": "node src/cli.ts lifecycle",
+    "growth": "node src/cli.ts growth",
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}

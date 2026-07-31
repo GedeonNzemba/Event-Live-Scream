@@ -72,11 +72,26 @@ high emotional relevance. That is the highest-trust acquisition channel that exi
 costs nothing. **The pool is not a payments feature. It is the growth engine, and it should
 be built first, not "later when we have users."**
 
-One important cost caveat: many small card payments cost far more to process than one large
-one. Nine payments of €10 incur roughly €3.60 in fees against €0.84 for a single €89 charge.
+One important cost caveat, now modelled properly in [`pool/`](../pool): many small card
+payments cost far more to process than one large one. Nine relatives contributing €10 each
+from five countries incur about **€4.93** in fees, against **€1.59** for a single €89 charge
+from a French card — roughly three times as much. International relatives are the reason it
+is not simply 9 × the EEA rate: a contribution from Montréal or Johannesburg costs about
+twice what the same amount from Paris does, once non-EEA card rates and currency conversion
+are counted.
+
+The right way to read that cost is the comparison the model makes: the pool nets what a
+single payer handing over €86.62 would net, so splitting cost €3.38 — and it introduced seven
+new relatives. **That is about €0.50 per acquired customer against roughly €20 to buy one
+with advertising.** Splitting a bill is not a cost to be minimised; it is the cheapest
+acquisition channel this company has, arriving disguised as a processing line item.
+
 Mitigations, in order of preference: a stored balance so repeat contributors pay from a
-pre-funded wallet; SEPA direct debit for French and Belgian contributors (a few cents, not
-1.5% + €0.25); and a minimum contribution of €5.
+pre-funded wallet (zero marginal fee); SEPA direct debit for French and Belgian contributors;
+and a minimum contribution of €5, because below that the processor takes over 6% of a gift to
+a grieving family. One trap the model surfaced: **SEPA is much cheaper and takes about five
+days to clear, while a *matanga* is booked four days before the burial.** Offer bank debit for
+weddings booked weeks ahead and never for the bereavement lane.
 
 ### 3. Keepsakes and recordings (month 3)
 
@@ -218,6 +233,16 @@ A ratio that high is a signal to be suspicious of, not proud of. It rests almost
 the pool mechanic delivering cheap acquisition. If the pool underperforms and CAC lands at
 €30, the ratio falls to ~4.7× — still a viable business, but a different one, funded
 differently. **Measure the pool's viral coefficient before believing anything else here.**
+
+The model in [`pool/`](../pool) inverts this into something testable. A blended CAC of about
+€11.50 against €20 paid requires a viral coefficient of **K ≈ 0.43** — meaning that at a pool
+of nine, roughly **7% of newly-exposed relatives later book an event of their own.** That is
+plausible rather than heroic, and it is observable during the thirty-day concierge phase.
+
+It also sets the raise. Sustaining the phase-2 gate of 300 presences a month costs about
+€4,500/month in paid acquisition at K=0.25 and about €2,400/month at K=0.6 — the same
+milestone, roughly double the burn, decided entirely by whether relatives who watched somebody
+else's wedding go on to book their own.
 
 ## What the platform charges the operator
 
