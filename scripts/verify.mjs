@@ -65,7 +65,7 @@ if (major < 22 || (major === 22 && minor < 18)) {
   process.exit(1);
 }
 
-for (const dir of ["prototype", "pool", "app"]) {
+for (const dir of ["prototype", "pool", "app", "media"]) {
   if (!existsSync(join(root, dir))) {
     console.error(red(`\n  Missing directory: ${dir}\n`));
     process.exit(1);
@@ -80,6 +80,9 @@ check("family-pool: money and rules", "pool", ["--test", "test/money.test.ts", "
   expectOut: /# fail 0/,
 });
 check("app: booking, pool and escaping", "app", ["--test", "test/app.test.ts"], {
+  expectOut: /# fail 0/,
+});
+check("media: ingest, tokens and completeness", "media", ["--test", "test/media.test.ts"], {
   expectOut: /# fail 0/,
 });
 
@@ -127,8 +130,10 @@ console.log(dim(`\n  ${"─".repeat(70)}`));
 if (failed.length === 0) {
   console.log(green(bold(`  All ${checks.length} checks passed.`)));
   console.log(dim("  Everything in this repository that can run, runs.\n"));
-  console.log(dim("  What that does NOT mean: there is no capture app, no video backend and no"));
-  console.log(dim("  real payments here. See TESTING.md for what exists and what does not.\n"));
+  console.log(dim("  Not included here: the browser end-to-end run, which drives a real camera"));
+  console.log(dim("  through capture, blackout, backfill and playback:\n"));
+  console.log(dim("      npm run test:e2e\n"));
+  console.log(dim("  Still not built: real payments, WhatsApp delivery, Talk mode. See TESTING.md.\n"));
 } else {
   console.log(red(bold(`  ${failed.length} of ${checks.length} checks failed:\n`)));
   for (const f of failed) {

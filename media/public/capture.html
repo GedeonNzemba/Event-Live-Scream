@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Elongo — correspondant</title>
+<link rel="stylesheet" href="/media.css" />
+<style>
+  .panel { background: var(--raise); border: 1px solid var(--rule); border-radius: 11px; padding: 1rem 1.1rem; margin-top: 1rem; }
+  .panel h2 { font-family: var(--serif); font-weight: 400; font-size: 1.05rem; margin: 0 0 .6rem; }
+  .check { display: flex; gap: .7rem; align-items: flex-start; padding: .45rem 0; font-size: .93rem; }
+  .check input { margin-top: .35rem; width: auto; flex: none; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .7rem; }
+  .stat { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: .6rem .7rem; }
+  .stat b { display: block; font-family: var(--mono); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: .74rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .07em; }
+  .rung { font-family: var(--mono); font-size: .78rem; }
+  label.inline { display: flex; flex-direction: row; align-items: center; gap: .5rem; font-size: .9rem; }
+  label.inline input { width: auto; }
+  .sim { border-color: var(--signal); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Correspondant</h1>
+  <p class="small muted">Vous filmez pour la famille à l'étranger. Tenez le téléphone à deux mains,
+  approchez-vous pour les discours, et ne marchez pas en filmant.</p>
+
+  <div class="panel" id="setupPanel">
+    <h2>1 — L'événement</h2>
+    <label>Référence
+      <input id="presenceId" value="demo" />
+    </label>
+    <label>Clé du correspondant
+      <input id="captureKey" placeholder="collée depuis l'ordre de mission" />
+    </label>
+    <p class="small muted" id="setupHint">
+      Pour un test&nbsp;: <button id="devCreate" type="button">créer un événement de démonstration</button>
+    </p>
+  </div>
+
+  <div class="panel" id="consentPanel">
+    <h2>2 — Accord de la famille</h2>
+    <p class="small muted">À voix haute, avec le chef de famille, avant de commencer.
+    Sa parole passe avant celle du client qui paie.</p>
+    <label class="check"><input type="checkbox" id="c1" /><span>Le chef de famille est d'accord pour qu'on filme</span></label>
+    <label class="check"><input type="checkbox" id="c2" /><span>J'ai demandé ce qu'il ne faut <b>pas</b> filmer</span></label>
+    <label class="check"><input type="checkbox" id="c3" /><span>Je porte le badge, tout le monde voit que je filme</span></label>
+  </div>
+
+  <div class="panel">
+    <h2>3 — Filmer</h2>
+    <div class="stage" style="margin-top:0">
+      <video id="preview" playsinline muted></video>
+      <div class="overlay" id="screenOff">
+        <div class="big">Écran éteint</div>
+        <div class="sub">L'enregistrement continue. L'écran est la plus grosse dépense de batterie.</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button id="start" class="primary">Commencer</button>
+      <button id="stop" disabled>Terminer</button>
+      <button id="pause" disabled title="Coupe l'image et le son immédiatement">Pause</button>
+      <label class="inline"><input type="checkbox" id="screenToggle" checked /> Aperçu</label>
+    </div>
+    <p class="rung" id="rungLine">—</p>
+  </div>
+
+  <div class="panel">
+    <h2>État</h2>
+    <div class="grid">
+      <div class="stat"><b id="statCaptured">0:00</b><span>Filmé</span></div>
+      <div class="stat"><b id="statSent">0</b><span>Envoyés</span></div>
+      <div class="stat"><b id="statBacklog">0</b><span>En attente</span></div>
+      <div class="stat"><b id="statBattery">—</b><span>Batterie</span></div>
+      <div class="stat"><b id="statUplink">—</b><span>Débit</span></div>
+      <div class="stat"><b id="statComplete">—</b><span>Reçu</span></div>
+    </div>
+    <p class="small muted" id="reassure">Tout ce qui est filmé est gardé sur le téléphone d'abord.
+    Même sans réseau, rien n'est perdu.</p>
+  </div>
+
+  <div class="panel sim">
+    <h2>Simulation réseau</h2>
+    <p class="small muted">Pour tester sans aller à Brazzaville : coupe l'envoi sans arrêter la caméra,
+    exactement comme une coupure de courant au relais.</p>
+    <label class="inline"><input type="checkbox" id="simOffline" /> Couper le réseau</label>
+    <label class="inline"><input type="checkbox" id="simSlow" /> Réseau très lent (audio seulement)</label>
+  </div>
+
+  <div id="error"></div>
+</main>
+<script type="module" src="/capture.js"></script>
+</body>
+</html>

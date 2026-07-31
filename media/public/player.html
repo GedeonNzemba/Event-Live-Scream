@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Elongo — en direct</title>
+<link rel="stylesheet" href="/media.css" />
+</head>
+<body>
+<main>
+  <div class="when" id="when">—</div>
+  <h1 id="title">Chargement…</h1>
+
+  <div class="stage">
+    <video id="video" playsinline></video>
+    <div class="overlay" id="overlay">
+      <span class="pulse" id="pulse"></span>
+      <div class="big" id="overlayTitle">En attente</div>
+      <div class="sub" id="overlaySub"></div>
+    </div>
+  </div>
+
+  <div class="bar" id="bar">
+    <span id="status"><span class="dot"></span><span id="statusText">…</span></span>
+    <span class="push">
+      <span class="muted" id="viewers">—</span>
+      <button id="talk" title="Demander la parole">Parler</button>
+    </span>
+  </div>
+
+  <div class="controls">
+    <button id="playPause" class="primary">Lecture</button>
+    <button id="live">Revenir au direct</button>
+    <div class="scrub">
+      <input type="range" id="seek" min="0" max="0" value="0" step="1" aria-label="Position" />
+      <span class="mono small" id="clock">0:00</span>
+    </div>
+  </div>
+
+  <div class="archive">
+    <h2>L'enregistrement</h2>
+    <div class="meter" id="meter"></div>
+    <p class="small muted" id="archiveNote">—</p>
+  </div>
+
+  <div id="error"></div>
+</main>
+<script type="module" src="/player.js"></script>
+</body>
+</html>
