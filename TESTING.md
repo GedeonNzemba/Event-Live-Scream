@@ -35,8 +35,8 @@ would be to spend a year building an app before finding out whether ten families
 
 ## Run everything in one command
 
-Requires **Node 22.18 or newer** (it runs the TypeScript directly, no build step). Check with
-`node --version`.
+Requires **Node 22.18 or newer** — it runs the TypeScript directly, with no build step. Node 22
+and Node 24 are both known to work. Check with `node --version`.
 
 ```bash
 npm run verify
