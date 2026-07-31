@@ -22,7 +22,15 @@ const DIALLING: Record<Country, string> = {
   ZA: "27",
 };
 
-/** National numbers that start with a trunk prefix to be stripped. */
+/**
+ * National numbers that start with a trunk prefix to be stripped.
+ *
+ * Not universal, and getting it wrong sends every message into the void.
+ * **Congo-Brazzaville keeps its leading zero**: national mobile numbers are
+ * nine digits beginning `05` or `06`, and the international form is simply
+ * +242 followed by all nine — `+242 06 123 45 67`. Stripping it the way France
+ * requires produces a number one digit short that no carrier will route.
+ */
 const TRUNK_PREFIX: Partial<Record<Country, string>> = {
   FR: "0",
   BE: "0",
@@ -31,7 +39,7 @@ const TRUNK_PREFIX: Partial<Record<Country, string>> = {
   IT: "", // Italy keeps its leading zero
   ES: "",
   ZA: "0",
-  CG: "0",
+  CG: "", // and so does Congo
 };
 
 export type NormalisedPhone =

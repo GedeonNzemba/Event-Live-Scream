@@ -16,9 +16,18 @@ describe("phone numbers", () => {
     }
   });
 
-  it("normalises a Brazzaville number", () => {
-    const r = normalise("05 551 22 33", "CG");
-    assert.equal(r.ok && r.e164, "+242555122 33".replace(" ", ""));
+  it("keeps the leading zero on a Brazzaville number", () => {
+    // Congo national mobile numbers are nine digits beginning 05 or 06, and the
+    // international form keeps all nine — unlike France, which drops the trunk
+    // zero. Stripping it yields a number no carrier will route.
+    for (const input of ["05 551 22 33", "055512233", "+242055512233", "00242055512233"]) {
+      const r = normalise(input, "CG");
+      assert.equal(r.ok && r.e164, "+242055512233", `failed on "${input}"`);
+    }
+  });
+
+  it("still drops the trunk zero where the country expects it", () => {
+    assert.equal(normalise("06 12 34 56 78", "FR").ok && normalise("06 12 34 56 78", "FR").e164, "+33612345678");
   });
 
   it("keeps an international number that already has its prefix", () => {

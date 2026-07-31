@@ -125,7 +125,7 @@ check("app: booking, pool and escaping", "app", ["--test", "test/app.test.ts"], 
 check("media: ingest, tokens and completeness", "media", ["--test", "test/media.test.ts"], {
   isTest: true,
 });
-check("notify: templates, phones and outbox", "notify", ["--test", "test/notify.test.ts"], {
+check("notify: templates, phones, SMS and outbox", "notify", ["--test", "test/notify.test.ts", "test/sms.test.ts"], {
   isTest: true,
 });
 

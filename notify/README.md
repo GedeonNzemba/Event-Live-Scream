@@ -57,6 +57,77 @@ something. Those messages carry a TTL and are dropped, not retried forever.
 **A missing token falls back to dry-run rather than throwing.** At three in the morning
 during somebody's funeral, printing to a console beats crashing.
 
+## Can SMS be free? Mostly yes, and here is the honest arithmetic
+
+You asked whether the paid gateway is really necessary. Short answer: **for the volume this
+product actually needs, no — and both free routes are implemented in `src/sms.ts`.**
+
+### First, how little SMS is needed
+
+The diaspora never gets an SMS. They get push notifications, which cost nothing. Once a
+correspondent installs the app, they get push too. SMS is needed in exactly two places:
+
+1. Recruiting a correspondent who has installed nothing yet.
+2. **Fallback when push does not arrive** — and this is not hypothetical here. Tecno, Infinix
+   and Xiaomi ship battery managers that routinely kill FCM delivery, and those are precisely
+   the phones correspondents own.
+
+That is a handful of messages per correspondent per month. **At 300 presences the entire SMS
+bill is single-digit euros either way.** This is not where the money is — but it is where a
+hard vendor dependency would be, and removing that is worth doing.
+
+### The routes, assessed
+
+| Route | Verdict | Why |
+| --- | --- | --- |
+| **Email-to-SMS** (`number@carrier.tld`) | ❌ Dead end | A North American convention that is being switched off — Verizon has already gone. **No published gateway exists for MTN Congo or Airtel Congo.** |
+| **[android-sms-gateway](https://github.com/capcom6/android-sms-gateway)** | ✅ Viable, low volume | Apache-2.0, actively maintained. A spare Android with a local SIM becomes an HTTP API. Implemented as `androidGateway()` |
+| **Gammu-SMSD + USB modem** | ✅ Sturdier version | No Android throttle, built for this. A Huawei E3372 is ~€25. Drive it through `webhookGateway()` pointed at a thin shim |
+| **[Africa's Talking](https://africastalking.com)** | 💶 ~€0.01–0.02 | Covers Congo-Brazzaville. Buys delivery receipts, a registered sender ID, and infrastructure |
+
+### The limits that matter
+
+**Android throttles outgoing SMS at 30 per 30 minutes** by default. Fine for tens of messages
+a day; not a platform. android-sms-gateway's own README says it is "not recommended for batch
+sending due to potential mobile operator restrictions" — believe it.
+
+**A consumer SIM cannot have an alphanumeric sender ID.** Messages arrive from an unknown
+number rather than from `ELONGO`, which matters when you are asking someone to accept a paid
+mission. Congo's regulator (ARPCE) expects registered sender IDs for A2P traffic — worth
+checking before scaling this route.
+
+### The catch nobody mentions
+
+Both free routes need a device that stays **powered and connected in Brazzaville**.
+
+This company exists *because* mains power and connectivity are unreliable there. Running your
+own SMS infrastructure on the exact two things you built a product to work around is a real
+risk, not a clever saving.
+
+### What to actually do
+
+```
+Phase 0–1   android-sms-gateway on a spare Android with a Congolese SIM.
+            Nearly free, no vendor account, nothing to wait for approval on.
+
+Phase 2+    fallbackChain(androidGateway(...), africasTalking(...))
+            The free route first; a flat phone in Brazzaville degrades into a
+            small bill rather than a correspondent who never hears about a job.
+
+Always      Push first. SMS only when push failed or the app is not installed.
+```
+
+`fallbackChain()` implements exactly that, and is tested to confirm the paid route is never
+touched while the free one works.
+
+### One bug this exercise caught
+
+Writing the SMS tests found that **Congo-Brazzaville keeps its leading zero** in international
+format — national mobile numbers are nine digits beginning `05`/`06`, and the international
+form is `+242` plus all nine. France drops its trunk zero; Congo does not. The normaliser was
+stripping it, producing a number one digit short that no carrier would route. **Every
+correspondent SMS would have silently gone nowhere.** Fixed, and now tested in both directions.
+
 ## If Meta will not give you API access
 
 Signup is closed in many countries, and it blocks nothing. Sharing a pool link into a family
