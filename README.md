@@ -74,10 +74,11 @@ npm run verify                  # everything: both suites, every CLI, the error 
 cd prototype && npm run demo    # simulate a 3-hour wedding on a bad link
 ```
 
-**What is built:** the strategy, and two runnable models of the parts that carry the risk.
-There is no app, no backend, no player and no payments yet — deliberately, because the most
-expensive mistake available right now is building a year of product before finding out
-whether ten families will pay €25. [TESTING.md](TESTING.md) has the full inventory.
+**What is built:** the strategy, two models of the parts that carry the risk, and working
+software for booking, capture, playback and notifications — 122 tests plus a browser
+end-to-end run. **Payments are deliberately not built yet**, and neither is live WhatsApp
+delivery: fees are computed exactly but no card is charged, and messages are rendered but not
+sent. [TESTING.md](TESTING.md) has the honest inventory and how to break all of it.
 
 ## The commercial bet
 
@@ -101,6 +102,20 @@ to a refund. No database, no build step.
 ```bash
 npm run app:seed                # three example bookings
 npm run app                     # http://localhost:3000
+```
+
+## And it films
+
+[`media/`](./media) is the capture client, ingest, archive and player, working end to end. A
+correspondent records in the browser, segments land in IndexedDB before the network is
+involved, and the archive completes even when the link dies mid-ceremony. The end-to-end
+suite drives a real camera through a blackout and back, and asserts the recording still
+reaches 100%.
+
+```bash
+npm run media                   # http://localhost:3100/capture.html
+npm run test:e2e                # 17 checks: camera → blackout → backfill → playback
+npm run demo:messages           # every WhatsApp message, with the cost
 ```
 
 ## The documents

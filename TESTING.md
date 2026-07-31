@@ -11,21 +11,23 @@ risk.
 | Strategy, business model, operations, architecture | **Written** — 11 documents in `docs/` |
 | Network resilience model (ladder, power, store-and-forward) | **Runnable simulation** — `prototype/`, 20 tests |
 | Family pool model (fees, shortfalls, growth math) | **Runnable model** — `pool/`, 33 tests |
-| Booking flow, shareable pool page, ops view | **Runnable web app** — `app/`, 23 tests |
-| Android correspondent app | **Not built** |
-| Video backend: ingest, transcode, archive assembly | **Not built** |
-| Browser player | **Not built** |
-| Real payments (Stripe), payouts, mobile money | **Not built** — fees are computed, no card is charged |
-| WhatsApp Cloud API integration | **Not built** — the card preview is a mock-up |
-| Anything that touches a real camera or a real network | **Not built** |
+| Booking flow, shareable pool page, ops view | **Working web app** — `app/`, 23 tests |
+| Capture client, ingest, archive, player | **Working, end to end** — `media/`, 27 tests + 17 browser checks |
+| WhatsApp templates, outbox, delivery drivers | **Working, dry-run** — `notify/`, 19 tests |
+| **Real payments (Stripe)** | **Not built — deliberately deferred until after you test** |
+| Live WhatsApp delivery | **Not connected** — needs a Meta account and approved templates |
+| Talk mode (real-time speaking into the room) | **Not built** — the request button exists and says so |
+| Native Android app | **Not built** — the web capture client covers phase 1 |
+| Transcode, highlight reel, CDN, object storage | **Not built** |
 
 `prototype/` and `pool/` are **models**. They show the design holds up under conditions we
 believe resemble Congo. They do not show it works in Congo — only ten real events can do
 that, which is what [docs/07](docs/07-roadmap-and-validation.md) is for.
 
-`app/` is a **real web application** you can click through, but it simulates payment: it
-computes the true processing fee for every contribution using the model in `pool/`, and
-charges nobody.
+`app/`, `media/` and `notify/` are **real software you can run.** The camera records, the
+segments upload, the archive completes, the player plays. What is simulated is money (fees
+are computed exactly, no card is charged) and WhatsApp delivery (messages are rendered and
+printed, not sent).
 
 That is deliberate, and it is the right order. The most expensive mistake available right now
 would be to spend a year building an app before finding out whether ten families will pay
@@ -110,6 +112,72 @@ The escaping and the restart cases both have tests, because both are the kind of
 looks fine until the day it is not: a name that breaks out of the HTML would let one family
 attack another's page, and a restart that reopened a closed pool would charge a booker the
 shortfall twice.
+
+## Film something and watch it back
+
+This is the part worth doing on a real phone.
+
+```bash
+npm run media          # http://localhost:3100
+```
+
+**On your laptop first:**
+
+1. Open `http://localhost:3100/capture.html`.
+2. Press **créer un événement de démonstration** — it fills in the key and gives you a
+   player link.
+3. Tick the three consent boxes. (Try pressing **Commencer** before ticking them: it refuses.
+   The family's agreement is a hard gate, per [docs/05](docs/05-operations.md).)
+4. Press **Commencer** and allow the camera.
+5. Open the player link in another tab and press **Lecture**.
+
+**Then break it, which is the interesting part:**
+
+6. On the capture tab, tick **Couper le réseau**. Watch: the camera keeps filming, "Filmé"
+   keeps climbing, "En attente" starts building, and the player says *"Connexion perdue —
+   l'enregistrement continue, vous ne perdez rien."*
+7. Wait a minute. Untick it.
+8. Watch the backlog drain to zero and the archive meter fill to 100%.
+
+That sequence is the entire company. Nothing was lost; it just arrived late.
+
+**On a real phone** — the one test that matters most — put your laptop and phone on the same
+network, find your laptop's LAN address, and open `http://<that-address>:3100/capture.html`
+on the phone. Note that browsers only allow camera access over HTTPS or on `localhost`, so a
+phone on a plain LAN address will refuse: use `ngrok`, `cloudflared` or a self-signed
+certificate. Then walk out of Wi-Fi range mid-recording and come back.
+
+### Things worth trying to break
+
+```
+Wrong capture key                → 401, refuses to ingest
+Player link with a tampered token → 403, "ce lien n'est plus valable"
+Reload the player mid-event       → picks up from the manifest, DVR intact
+Close the capture tab            → held segments survive in IndexedDB
+```
+
+The end-to-end suite automates most of this against a fake camera:
+
+```bash
+npm run test:e2e     # 17 checks, ~90 seconds
+```
+
+## Read the messages
+
+```bash
+npm run demo:messages
+```
+
+Prints every WhatsApp message a family and a correspondent would receive across one wedding —
+booking, contributions, the gig offer, both reminders, the start-now message, the network-cut
+warning, the delivery notice, the payout — with a running cost (about €0.31 per event).
+
+**This is the copy a bereaved family reads.** It is worth going through line by line and
+telling me what sounds wrong; the wording lives in one file (`notify/src/templates.ts`) so
+that changing it touches no application code.
+
+Nothing is actually sent. Connecting live needs a Meta Business account and all eleven
+templates approved, which takes days — start that early.
 
 ## How to attack the claims
 
