@@ -80,6 +80,7 @@ Read in order; each one assumes the previous.
 
 | # | Document | What it answers |
 | --- | --- | --- |
+| **00** | **[How it works](docs/00-how-it-works.md)** | **Start here.** One wedding, start to finish, in plain language |
 | 01 | [Problem](docs/01-problem.md) | Why this is a resource-and-labour problem, not a connectivity problem |
 | 02 | [Solution](docs/02-solution.md) | What the product actually is, and the Watch/Talk split |
 | 03 | [Business model](docs/03-business-model.md) | Pricing, unit economics, the family-pool multiplier, the payments endgame |
