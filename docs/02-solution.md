@@ -164,7 +164,15 @@ contributions collected. Fighting that is how this company dies.
 So: **booking, invitations, reminders and the viewing link all travel through WhatsApp.**
 The diaspora viewer clicks a link and watches in their browser. No app install, no account,
 no password — friction at that moment costs conversion, and the moment is emotionally
-loaded. The only person who installs software is the operator, who is paid to.
+loaded. The only person who *must* install software is the operator, who is paid to.
+
+But the video itself is never on WhatsApp, and never on YouTube beyond the throwaway
+concierge test in [document 07](./07-roadmap-and-validation.md). The stream, the player and
+the links are ours — because Content ID would silently mute funeral recordings full of
+commercial rumba, because an unlisted link cannot express a family pool, and because Talk
+mode cannot exist on a broadcast platform. Later the browser is joined by casting to the
+living-room television and by native apps that can actually push a notification when the
+ceremony starts. All of that is [document 09](./09-platforms-and-clients.md).
 
 ## Service tiers
 

@@ -27,6 +27,12 @@ of relatives, it needs no app on the viewer's side, and it records automatically
 *not* do store-and-forward, audio-floor, or power budgeting — which is exactly the gap the
 real product fills, and month one is not the time to prove that.
 
+**It is also deliberately throwaway, and it must not become the architecture.** From phase 1
+the stream is ours end to end: Content ID will mute funeral recordings full of commercial
+rumba, an unlisted link cannot express a family pool, and Talk mode cannot exist on somebody
+else's broadcast platform. See [document 09](./09-platforms-and-clients.md). Use YouTube for
+ten events, learn whether anyone pays, then never use it again.
+
 ### Weeks 1–2: line up supply and demand
 
 **One correspondent.** A cousin, a friend's younger brother, someone's nephew in Brazzaville.
@@ -107,7 +113,10 @@ it will be used.
 
 - Android correspondent app: segment store, degradation ladder, power budgeting, resumable
   prioritised upload. The prototype in [`prototype/`](../prototype) is the specification
-- Browser viewer, no install, WhatsApp-delivered links
+- **Our own browser player and manifest**, no install, WhatsApp-delivered links — so the CDN
+  underneath stays swappable and customers only ever see us
+- **Cast and AirPlay**, which buys the living-room television almost free once the player is
+  ours ([document 09](./09-platforms-and-clients.md))
 - Ingest, packaging, archive assembly, completeness tracking
 - Correspondent app with ratings, telemetry and automated payouts
 - Talk mode
@@ -123,6 +132,9 @@ above 60% at six months.
 
 - Company-owned kits: locked-down dual-SIM Android, big battery, gimbal, wide lens
 - **Dual-SIM bonding** — the largest remaining quality lever and the hardest to copy
+- **iOS and Android viewer apps** with universal links and push notifications — for a
+  one-time event four time zones away, the notification *is* the product. Plus native TV apps
+  for the two platforms our analytics say diaspora households actually own
 - Cross the river to **Kinshasa**: same language, same ceremonies, ten times the diaspora
 - Then Cameroon and Côte d'Ivoire, both large francophone diasporas in France, both on
   euro-pegged currencies

@@ -89,6 +89,7 @@ Read in order; each one assumes the previous.
 | 06 | [Technical architecture](docs/06-technical-architecture.md) | The full system design |
 | 07 | [Roadmap & validation](docs/07-roadmap-and-validation.md) | What to build when, and how to test the thesis in 30 days for under €500 |
 | 08 | [Risks](docs/08-risks.md) | What kills this business, and what to do about it |
+| 09 | [Platforms & clients](docs/09-platforms-and-clients.md) | Why the stream is ours, what we rent, and what people watch it on |
 
 ## Where to start tomorrow
 
