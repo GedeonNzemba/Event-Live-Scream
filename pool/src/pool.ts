@@ -68,6 +68,15 @@ export type RefundResult = {
 const DEFAULT_MIN = eur(5);
 const DEFAULT_MAX_OVERFUND = 1.5;
 
+/** Everything needed to reconstruct a pool exactly, for storage. */
+export type PoolSnapshot = {
+  readonly config: PoolConfig;
+  readonly contributions: readonly Contribution[];
+  readonly state: PoolState;
+  readonly closed: boolean;
+  readonly nextId: number;
+};
+
 export class FamilyPool {
   readonly config: PoolConfig;
   private readonly contributions: Contribution[] = [];
@@ -78,6 +87,32 @@ export class FamilyPool {
   constructor(config: PoolConfig) {
     if (config.target <= 0) throw new RangeError("target must be positive");
     this.config = config;
+  }
+
+  /**
+   * Serialise for storage.
+   *
+   * Contributions are stored rather than replayed, because closing the pool
+   * appends a shortfall charge — replaying a snapshot through `contribute`
+   * would either drop that charge or double it.
+   */
+  toSnapshot(): PoolSnapshot {
+    return {
+      config: this.config,
+      contributions: this.contributions.map((c) => ({ ...c })),
+      state: this.state,
+      closed: this.closed,
+      nextId: this.nextId,
+    };
+  }
+
+  static fromSnapshot(s: PoolSnapshot): FamilyPool {
+    const pool = new FamilyPool(s.config);
+    pool.contributions.push(...s.contributions.map((c) => ({ ...c })));
+    pool.state = s.state;
+    pool.closed = s.closed;
+    pool.nextId = s.nextId;
+    return pool;
   }
 
   // ---- reading -----------------------------------------------------------

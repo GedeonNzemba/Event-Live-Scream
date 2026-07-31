@@ -140,6 +140,53 @@ describe("state transitions", () => {
   });
 });
 
+describe("a pool survives being stored and reloaded", () => {
+  it("round-trips through a snapshot without losing money or state", () => {
+    const p = buildPool(getScenario("wedding"));
+    p.closeAtDeadline();
+
+    const revived = FamilyPool.fromSnapshot(JSON.parse(JSON.stringify(p.toSnapshot())));
+
+    assert.equal(revived.raised, p.raised);
+    assert.equal(revived.processingFees, p.processingFees);
+    assert.equal(revived.status, p.status);
+    assert.equal(revived.payerCount, p.payerCount);
+    assert.equal(revived.firstTimers, p.firstTimers);
+    assert.deepEqual(revived.all, p.all);
+  });
+
+  it("keeps a reloaded pool closed", () => {
+    // The bug this guards: a server restart must not reopen a pool for
+    // contributions the day after the event.
+    const p = new FamilyPool(base);
+    p.contribute("Sylvain", "FR", eur(89), { firstTime: false });
+    p.closeAtDeadline();
+
+    const revived = FamilyPool.fromSnapshot(p.toSnapshot());
+    assert.throws(() => revived.contribute("Late", "FR", eur(10)), /closed/);
+  });
+
+  it("does not replay the shortfall charge on reload", () => {
+    const p = new FamilyPool(base);
+    p.contribute("Sylvain", "FR", eur(20), { firstTime: false });
+    p.closeAtDeadline();
+    const raisedAfterClose = p.raised;
+
+    const revived = FamilyPool.fromSnapshot(p.toSnapshot());
+    assert.equal(revived.raised, raisedAfterClose, "the booker was charged twice");
+    assert.equal(revived.payerCount, 2);
+  });
+
+  it("continues issuing fresh contribution ids after reload", () => {
+    const p = new FamilyPool(base);
+    p.contribute("Sylvain", "FR", eur(20), { firstTime: false });
+
+    const revived = FamilyPool.fromSnapshot(p.toSnapshot());
+    const next = revived.contribute("Bernadette", "BE", eur(20));
+    assert.equal(next.id, 2, "ids must not collide after a restart");
+  });
+});
+
 describe("fees behave the way the pricing assumes", () => {
   it("makes small contributions disproportionately expensive", () => {
     const card = RAILS.card_eea;

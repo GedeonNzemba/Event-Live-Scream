@@ -1,0 +1,16 @@
+{
+  "name": "elongo-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The booking and family-pool flow — a runnable slice of the product, over the tested domain model in ../pool.",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "start": "node src/server.ts",
+    "dev": "node --watch src/server.ts",
+    "seed": "node src/seed.ts",
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}

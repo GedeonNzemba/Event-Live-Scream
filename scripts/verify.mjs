@@ -65,7 +65,7 @@ if (major < 22 || (major === 22 && minor < 18)) {
   process.exit(1);
 }
 
-for (const dir of ["prototype", "pool"]) {
+for (const dir of ["prototype", "pool", "app"]) {
   if (!existsSync(join(root, dir))) {
     console.error(red(`\n  Missing directory: ${dir}\n`));
     process.exit(1);
@@ -77,6 +77,9 @@ check("presence-engine: guarantees", "prototype", ["--test", "test/guarantees.te
   expectOut: /# fail 0/,
 });
 check("family-pool: money and rules", "pool", ["--test", "test/money.test.ts", "test/pool.test.ts"], {
+  expectOut: /# fail 0/,
+});
+check("app: booking, pool and escaping", "app", ["--test", "test/app.test.ts"], {
   expectOut: /# fail 0/,
 });
 
@@ -124,8 +127,8 @@ console.log(dim(`\n  ${"─".repeat(70)}`));
 if (failed.length === 0) {
   console.log(green(bold(`  All ${checks.length} checks passed.`)));
   console.log(dim("  Everything in this repository that can run, runs.\n"));
-  console.log(dim("  What that does NOT mean: there is no app, no backend, no player and no"));
-  console.log(dim("  payments here. See TESTING.md for what exists and what does not.\n"));
+  console.log(dim("  What that does NOT mean: there is no capture app, no video backend and no"));
+  console.log(dim("  real payments here. See TESTING.md for what exists and what does not.\n"));
 } else {
   console.log(red(bold(`  ${failed.length} of ${checks.length} checks failed:\n`)));
   for (const f of failed) {

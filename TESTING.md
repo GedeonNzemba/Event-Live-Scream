@@ -9,18 +9,23 @@ risk.
 | | Status |
 | --- | --- |
 | Strategy, business model, operations, architecture | **Written** — 11 documents in `docs/` |
-| Network resilience model (ladder, power, store-and-forward) | **Runnable** — `prototype/`, 20 tests |
-| Family pool model (fees, shortfalls, growth math) | **Runnable** — `pool/`, 29 tests |
+| Network resilience model (ladder, power, store-and-forward) | **Runnable simulation** — `prototype/`, 20 tests |
+| Family pool model (fees, shortfalls, growth math) | **Runnable model** — `pool/`, 33 tests |
+| Booking flow, shareable pool page, ops view | **Runnable web app** — `app/`, 23 tests |
 | Android correspondent app | **Not built** |
-| Backend, ingest, transcode, archive assembly | **Not built** |
+| Video backend: ingest, transcode, archive assembly | **Not built** |
 | Browser player | **Not built** |
-| Booking flow, WhatsApp integration | **Not built** |
-| Payments, payouts, mobile money | **Not built** |
+| Real payments (Stripe), payouts, mobile money | **Not built** — fees are computed, no card is charged |
+| WhatsApp Cloud API integration | **Not built** — the card preview is a mock-up |
 | Anything that touches a real camera or a real network | **Not built** |
 
-The two models are **simulations**. They prove the design holds up under conditions we
-believe resemble Congo. They do not prove the design works in Congo — only ten real events
-can do that, which is what [docs/07](docs/07-roadmap-and-validation.md) is for.
+`prototype/` and `pool/` are **models**. They show the design holds up under conditions we
+believe resemble Congo. They do not show it works in Congo — only ten real events can do
+that, which is what [docs/07](docs/07-roadmap-and-validation.md) is for.
+
+`app/` is a **real web application** you can click through, but it simulates payment: it
+computes the true processing fee for every contribution using the model in `pool/`, and
+charges nobody.
 
 That is deliberate, and it is the right order. The most expensive mistake available right now
 would be to spend a year building an app before finding out whether ten families will pay
@@ -66,6 +71,45 @@ npm run fees            # does splitting the bill destroy the margin?
 npm run lifecycle       # a pool that does not fill up
 npm run growth          # what the pool is worth as acquisition
 ```
+
+## Click through the actual product
+
+This is the part you can put in front of a real family.
+
+```bash
+npm run app:seed        # three example bookings
+npm run app             # http://localhost:3000
+```
+
+Then walk the flow:
+
+1. **Book something** at `/`. Pick a tier, name an event, say how many relatives are abroad.
+2. **You land on the pool page.** This is the link that would go into a family WhatsApp group.
+   Note the mock-up of the card WhatsApp renders — that card is what makes a relative tap it.
+3. **Contribute a few times** from different countries. Watch the progress bar, and open the
+   collapsed **Coulisses** panel: those are the real per-contribution fees from
+   `pool/src/rails.ts`. A €10 contribution from Montréal costs almost twice what the same
+   €10 from Paris does.
+4. **Go to `/ops`** and press **Clôturer** on the seeded birthday, which is deliberately
+   short of its target. The shortfall is charged to whoever booked it — an underfunded pool
+   is never a cancelled event.
+5. **Press Rembourser** on another one. Note that the processing fees do not come back. A
+   failed delivery is a real loss, not a wash.
+
+Things worth trying to break:
+
+```
+Contribute €2                       → refused; below €5 the processor takes over 6%
+Contribute after clôture            → refused, with a reason
+Deliver before closing              → refused
+Name an event  <script>alert(1)     → escaped, not executed
+Restart the server                  → everything is still there, and still closed
+```
+
+The escaping and the restart cases both have tests, because both are the kind of thing that
+looks fine until the day it is not: a name that breaks out of the HTML would let one family
+attack another's page, and a restart that reopened a closed pool would charge a booker the
+shortfall twice.
 
 ## How to attack the claims
 

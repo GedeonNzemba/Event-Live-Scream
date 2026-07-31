@@ -94,6 +94,15 @@ cd pool && npm test             # money arithmetic and the business rules
 cd pool && npm run demo         # fees, lifecycle and growth reports
 ```
 
+And [`app/`](./app) is that mechanic as a working web app — book an event, get a shareable
+link, watch relatives across five countries fill the pool, then run it through to delivery or
+to a refund. No database, no build step.
+
+```bash
+npm run app:seed                # three example bookings
+npm run app                     # http://localhost:3000
+```
+
 ## The documents
 
 Read in order; each one assumes the previous.
