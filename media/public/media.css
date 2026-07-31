@@ -89,3 +89,12 @@ input[type="range"] { width: 100%; accent-color: var(--river); }
 
 .notice { padding: .7rem .9rem; border-radius: 8px; border-left: 3px solid; font-size: .9rem; margin-top: 1rem; }
 .notice.err { border-color: var(--loss); background: color-mix(in srgb, var(--loss) 10%, transparent); }
+
+/* Where the network failed, marked in playback time. A viewer should be able to
+   see at a glance that there was a hole at 1:05 — and that it is the only one. */
+.scrub-track { position: relative; flex: 1; }
+.gaps { position: absolute; left: 0; right: 0; bottom: -6px; height: 6px; pointer-events: none; }
+.gaps i {
+  position: absolute; width: 3px; height: 6px; border-radius: 1px;
+  background: var(--loss); transform: translateX(-1px);
+}

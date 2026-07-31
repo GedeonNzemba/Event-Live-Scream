@@ -327,6 +327,8 @@ export function closeCapture(meta: PresenceMeta): PresenceMeta {
 /** Re-checks whether a backfilled Presence has become complete. */
 export function refreshCompletion(meta: PresenceMeta): PresenceMeta {
   invalidate(meta.id);
+  // Only a presence whose camera has stopped can become complete. A live one
+  // is still being filmed, however much of it has arrived so far.
   if (meta.state !== "ended") return meta;
   const done = completeness(meta);
   if (done.overallRatio < 1) return meta;

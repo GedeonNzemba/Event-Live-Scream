@@ -21,6 +21,15 @@ export type SegmentRef = {
   readonly capturedAt: number;
   readonly coversSec: number;
   readonly bytes: number;
+  /**
+   * The ladder rung the correspondent was on when this was captured.
+   *
+   * This is what lets the player say *when* the network failed rather than
+   * painting the current status across the whole recording. A viewer scrubbing
+   * to 14:32 needs to know what was happening at 14:32, not what is happening
+   * in Brazzaville right now.
+   */
+  readonly rung: number;
   readonly url: string;
 };
 
@@ -140,6 +149,7 @@ function refs(presenceId: string, track: Track, token: string): SegmentRef[] {
     capturedAt: s.capturedAt,
     coversSec: s.coversSec,
     bytes: s.bytes,
+    rung: s.rung ?? 0,
     url: `/media/${presenceId}/${track}/${s.seq}?t=${encodeURIComponent(token)}`,
   }));
 }

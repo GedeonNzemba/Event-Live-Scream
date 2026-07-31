@@ -32,7 +32,10 @@
     <button id="playPause" class="primary">Lecture</button>
     <button id="live">Revenir au direct</button>
     <div class="scrub">
-      <input type="range" id="seek" min="0" max="0" value="0" step="1" aria-label="Position" />
+      <div class="scrub-track">
+        <input type="range" id="seek" min="0" max="0" value="0" step="1" aria-label="Position" />
+        <div class="gaps" id="gaps" hidden></div>
+      </div>
       <span class="mono small" id="clock">0:00</span>
     </div>
   </div>

@@ -245,6 +245,122 @@ try {
   check("real media actually plays", played.currentTime > 0.4,
     `t=${played.currentTime.toFixed(1)}s of ${played.buffered.toFixed(1)}s buffered`);
 
+  // The founder's report: an outage at 1:05 was announced from second zero and
+  // never cleared, because the overlay showed the correspondent's CURRENT state
+  // over historical playback. At the start of a recording that completed, there
+  // must be nothing on screen.
+  await play.evaluate(() => {
+    // Leaving the live edge is what a viewer does by scrubbing; without it the
+    // follow-live logic correctly pulls the playhead back to the end.
+    window.__elongo.followLive = false;
+    document.getElementById("video").currentTime = 0;
+  });
+  await play.waitForTimeout(900);
+  const atStart = await play.evaluate(() => ({
+    overlay: document.getElementById("overlay").classList.contains("show"),
+    status: document.getElementById("statusText").textContent ?? "",
+  }));
+  check("no outage warning at the start of a clean stretch", !atStart.overlay, atStart.status.slice(0, 46));
+
+  check(
+    "status describes the moment being watched, not now",
+    /Enregistrement ·|Bonne connexion/.test(atStart.status),
+    atStart.status.slice(0, 40),
+  );
+
+  // Everything backfilled in the run above, so the finished recording has no
+  // hole — and showing no marker is the correct outcome. To test the gap
+  // machinery we need a recording that genuinely lost something, so build one:
+  // six segments with the middle four missing, exactly as a blackout that never
+  // recovered would leave it.
+  const gapKey = await (
+    await fetch(`${BASE}/dev/presence`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: "gaptest", eventName: "Matanga de Papa Émile" }),
+    })
+  ).json();
+
+  await fetch(`${BASE}/ingest/gaptest/open`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-elongo-key": gapKey.captureKey },
+    body: JSON.stringify({ mimeType: { v: "video/webm;codecs=vp8,opus", a: "audio/webm;codecs=opus" } }),
+  });
+
+  const copy = async (fromSeq, toSeq, capturedAt) => {
+    const src = await fetch(`${BASE}/media/e2etest/v/${fromSeq}?t=${encodeURIComponent(token)}`);
+    if (!src.ok) return false;
+    const bytes = Buffer.from(await src.arrayBuffer());
+    const put = await fetch(`${BASE}/ingest/gaptest/v/${toSeq}`, {
+      method: "PUT",
+      headers: {
+        "x-elongo-key": gapKey.captureKey,
+        "x-captured-at": String(capturedAt),
+        "x-covers-sec": "2",
+        "x-rung": "1",
+      },
+      body: bytes,
+    });
+    return put.ok;
+  };
+
+  // Present: 0-6s. Missing: 6-14s. Present again: 14-20s.
+  for (const [i, seq] of [0, 1, 2].entries()) await copy(seq, seq, i * 2);
+  for (const [i, seq] of [3, 4, 5].entries()) await copy(seq, seq + 4, 14 + i * 2);
+
+  await fetch(`${BASE}/ingest/gaptest/progress`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-elongo-key": gapKey.captureKey },
+    body: JSON.stringify({ capturedThroughSec: 20 }),
+  });
+  await fetch(`${BASE}/ingest/gaptest/close`, {
+    method: "POST",
+    headers: { "x-elongo-key": gapKey.captureKey },
+  });
+
+  const gapToken = (await (await fetch(`${BASE}/dev/token?id=gaptest`)).json()).token;
+  const gapPage = await context.newPage();
+  await gapPage.goto(`${BASE}/player.html?id=gaptest&t=${encodeURIComponent(gapToken)}`);
+  await gapPage.waitForFunction(
+    () => (window.__elongo?.timeline ?? []).length >= 4,
+    { timeout: 20000 },
+  );
+
+  const gaps = await gapPage.evaluate(() =>
+    (window.__elongo?.timeline ?? [])
+      .filter((e) => e.gapBefore > 0)
+      .map((e) => ({ at: e.capturedAt - e.gapBefore, len: e.gapBefore })),
+  );
+  check(
+    "the outage is located at the second it occurred",
+    gaps.length === 1 && gaps[0].at === 6 && gaps[0].len === 8,
+    gaps.length ? `${gaps[0].len}s missing from ${gaps[0].at}s` : "no gap recorded",
+  );
+
+  const markers = await gapPage.evaluate(() => document.querySelectorAll("#gaps i").length);
+  check("the outage is marked on the timeline", markers === 1, `${markers} marker(s)`);
+
+  // And the warning must appear only when the playhead reaches the hole.
+  await gapPage.evaluate(() => {
+    window.__elongo.followLive = false;
+    document.getElementById("video").currentTime = 0;
+  });
+  await gapPage.waitForTimeout(700);
+  const beforeHole = await gapPage.evaluate(
+    () => document.getElementById("overlay").classList.contains("show"),
+  );
+  await gapPage.evaluate(() => { document.getElementById("video").currentTime = 6.2; });
+  await gapPage.waitForTimeout(700);
+  const atHole = await gapPage.evaluate(() => ({
+    shown: document.getElementById("overlay").classList.contains("show"),
+    title: document.getElementById("overlayTitle").textContent ?? "",
+  }));
+  check(
+    "the warning appears at the hole and nowhere else",
+    !beforeHole && atHole.shown && /0:06/.test(atHole.title),
+    atHole.title.slice(0, 40),
+  );
+
   const archiveNote = await play.textContent("#archiveNote");
   check("player reports the archive to the family", /complet|arrivé|reçu/i.test(archiveNote ?? ""),
     (archiveNote ?? "").slice(0, 60));

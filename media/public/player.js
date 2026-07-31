@@ -39,6 +39,7 @@ const el = {
   clock: document.getElementById("clock"),
   meter: document.getElementById("meter"),
   archiveNote: document.getElementById("archiveNote"),
+  gaps: document.getElementById("gaps"),
   error: document.getElementById("error"),
 };
 
@@ -49,6 +50,12 @@ const state = {
   sourceBufferReady: null,
   /** Sequence numbers already appended, so polling never double-appends. */
   appended: new Set(),
+  /** Fetched but not yet appendable, because an earlier sequence is missing. */
+  holding: new Map(),
+  /** The next sequence the buffer will accept. Appending is strictly ordered. */
+  nextSeq: 0,
+  /** Maps playback position to event time, quality and holes. */
+  timeline: [],
   /** Segments fetched but waiting for the SourceBuffer to be idle. */
   queue: [],
   appending: false,
@@ -163,43 +170,176 @@ async function fetchNewSegments(manifest) {
   // the audio floor the client stops producing video, and the overlay explains
   // why rather than leaving the viewer staring at a frozen frame.
   const list = manifest.segments.v ?? [];
+
   for (const seg of list) {
-    if (state.appended.has(seg.seq)) continue;
-    state.appended.add(seg.seq);
+    if (state.appended.has(seg.seq) || state.holding.has(seg.seq)) continue;
     try {
       const res = await fetch(seg.url, { cache: "force-cache" });
-      if (!res.ok) {
-        state.appended.delete(seg.seq);
-        continue;
-      }
-      state.queue.push(await res.arrayBuffer());
-      pump();
+      if (!res.ok) continue;
+      state.holding.set(seg.seq, { buffer: await res.arrayBuffer(), meta: seg });
     } catch {
-      // Transient: forget it so the next poll retries.
-      state.appended.delete(seg.seq);
+      // Transient; the next poll retries.
     }
   }
+
+  drainInOrder(manifest);
+}
+
+/**
+ * Appends strictly in sequence order, holding back anything that arrives early.
+ *
+ * The SourceBuffer runs in `sequence` mode, which lays segments end to end in
+ * arrival order — so appending a backfilled segment from ten minutes ago after
+ * the live edge would splice the past into the present. During a blackout the
+ * correspondent prioritises live content, so out-of-order arrival is the normal
+ * case, not an edge case.
+ *
+ * Holding back means playback stalls exactly at the moment the network failed,
+ * which is the honest thing to show: that *is* where the hole is.
+ */
+function drainInOrder(manifest) {
+  const listed = new Set((manifest.segments.v ?? []).map((s) => s.seq));
+  const eventOver = manifest.state === "complete" || manifest.state === "ended";
+
+  for (;;) {
+    const held = state.holding.get(state.nextSeq);
+    if (held) {
+      state.holding.delete(state.nextSeq);
+      state.appended.add(state.nextSeq);
+      recordTimeline(held.meta);
+      state.queue.push(held.buffer);
+      state.nextSeq += 1;
+      continue;
+    }
+
+    // A sequence the server will never have: skip it once the event is over,
+    // rather than stalling the recording forever behind one lost segment.
+    if (!listed.has(state.nextSeq) && eventOver && state.holding.size > 0) {
+      state.nextSeq += 1;
+      continue;
+    }
+    break;
+  }
+  pump();
+}
+
+/**
+ * Maps playback position to what was happening at that moment of the event.
+ *
+ * Playback time and event time drift apart whenever content is missing: a
+ * twenty-minute hole occupies zero seconds of the buffer. Recording the
+ * relationship as segments are appended is the only way to answer "what was
+ * going on when this was filmed?" later.
+ */
+function recordTimeline(meta) {
+  const prev = state.timeline[state.timeline.length - 1];
+  const expectedCapturedAt = prev ? prev.capturedAt + prev.coversSec : 0;
+  const playbackStart = prev ? prev.playbackEnd : 0;
+
+  state.timeline.push({
+    playbackStart,
+    playbackEnd: playbackStart + meta.coversSec,
+    capturedAt: meta.capturedAt,
+    coversSec: meta.coversSec,
+    rung: meta.rung ?? 0,
+    // Seconds of the event that are missing immediately before this segment.
+    gapBefore: Math.max(0, meta.capturedAt - expectedCapturedAt),
+  });
+}
+
+function atPlayhead(t) {
+  const tl = state.timeline;
+  for (let i = tl.length - 1; i >= 0; i--) {
+    if (t >= tl[i].playbackStart) return tl[i];
+  }
+  return tl[0] ?? null;
 }
 
 // -------------------------------------------------------------- rendering ---
 
+const RUNG_LABEL = [
+  "720p", "480p", "360p", "240p", "180p", "photos", "audio seul", "coupé",
+];
+
+/**
+ * What the viewer is told, and when.
+ *
+ * The rule that took a founder's bug report to get right: **the live status
+ * describes now, and now is only relevant if you are watching now.** Painting
+ * the correspondent's current state across historical playback told a viewer
+ * at 0:04 that the connection was lost, when in fact it failed at 1:05 and
+ * they had not reached it yet. Worse, it never went away.
+ *
+ * So: at the live edge, report live. Anywhere else, report what was happening
+ * at the playhead — and surface an outage at the exact second it occurred.
+ */
 function renderStatus(manifest) {
-  const s = manifest.status;
-  el.status.className = `tone-${s.tone}`;
-  el.statusText.textContent = s.label;
+  const nothingYet = state.timeline.length === 0;
 
-  const offline = s.tone === "offline";
-  const waiting = s.tone === "buffering" && state.appended.size === 0;
+  if (nothingYet) {
+    const waiting = manifest.state === "scheduled" || manifest.status.tone === "buffering";
+    el.status.className = `tone-${manifest.status.tone}`;
+    el.statusText.textContent = manifest.status.label;
+    el.overlay.classList.toggle("show", waiting);
+    el.overlayTitle.textContent = "En attente du correspondant";
+    el.overlaySub.textContent = "L'événement n'a pas encore commencé.";
+    return;
+  }
 
-  if (offline || waiting) {
+  const here = atPlayhead(el.video.currentTime);
+  const lastEnd = state.timeline[state.timeline.length - 1].playbackEnd;
+  const atLiveEdge = manifest.live && lastEnd - el.video.currentTime <= 6;
+
+  // Just crossed a hole: say so, here, once, with the time it happened.
+  const crossing =
+    here && here.gapBefore > 0 && el.video.currentTime - here.playbackStart < 4;
+
+  if (crossing) {
     el.overlay.classList.add("show");
-    el.overlayTitle.textContent = offline ? "Connexion perdue à Brazzaville" : "En attente du correspondant";
-    el.overlaySub.textContent = offline
-      ? "Le correspondant continue de filmer. Tout sera livré dès que le réseau revient — vous ne perdez rien."
-      : "L'événement n'a pas encore commencé.";
+    el.overlayTitle.textContent = `Coupure réseau à ${mmss(here.capturedAt - here.gapBefore)}`;
+    el.overlaySub.textContent =
+      `${mmss(here.gapBefore)} n'a pas pu être transmis en direct. ` +
+      (manifest.completeness.overallRatio >= 1
+        ? "Ce passage est arrivé depuis — il est dans l'enregistrement."
+        : "Le correspondant filmait toujours ; ce passage arrivera dès que le réseau le permet.");
+  } else if (atLiveEdge && manifest.status.tone === "offline") {
+    el.overlay.classList.add("show");
+    el.overlayTitle.textContent = "Connexion perdue à Brazzaville";
+    el.overlaySub.textContent =
+      "Le correspondant continue de filmer. Tout sera livré dès que le réseau revient — vous ne perdez rien.";
   } else {
     el.overlay.classList.remove("show");
   }
+
+  if (atLiveEdge) {
+    el.status.className = `tone-${manifest.status.tone}`;
+    el.statusText.textContent = manifest.status.label;
+  } else if (here) {
+    // Historical playback: describe the moment being watched, not this one.
+    const quality = RUNG_LABEL[Math.min(RUNG_LABEL.length - 1, here.rung)];
+    el.status.className = here.rung >= 5 ? "tone-degraded" : "tone-good";
+    el.statusText.textContent = `Enregistrement · ${mmss(here.capturedAt)} · ${quality}`;
+  }
+}
+
+/** Draws where the network failed, in playback time, under the scrubber. */
+function renderGapMarkers() {
+  const tl = state.timeline;
+  if (tl.length === 0) return;
+  const total = tl[tl.length - 1].playbackEnd || 1;
+
+  const marks = tl
+    .filter((e) => e.gapBefore > 0)
+    .map((e) => {
+      const left = (e.playbackStart / total) * 100;
+      return (
+        `<i style="left:${left.toFixed(2)}%" ` +
+        `title="Coupure de ${mmss(e.gapBefore)} à ${mmss(e.capturedAt - e.gapBefore)}"></i>`
+      );
+    });
+
+  el.gaps.innerHTML = marks.join("");
+  el.gaps.hidden = marks.length === 0;
 }
 
 function renderArchive(manifest) {
@@ -270,6 +410,7 @@ async function tick() {
 
     renderStatus(manifest);
     renderArchive(manifest);
+    renderGapMarkers();
     renderSeek();
 
     // Stop polling only when the event is over AND every segment the manifest
@@ -277,7 +418,7 @@ async function tick() {
     // the player exit on its very first tick — before the SourceBuffer existed
     // — and sit there showing "recording complete" over an empty screen.
     const listed = (manifest.segments.v ?? []).length;
-    const haveAll = listed > 0 && state.appended.size >= listed;
+    const haveAll = listed > 0 && state.appended.size >= listed && state.holding.size === 0;
     if (manifest.state === "complete" && haveAll && state.queue.length === 0) {
       if (state.mediaSource?.readyState === "open" && !state.sourceBuffer?.updating) {
         try {
@@ -314,7 +455,12 @@ el.playPause.addEventListener("click", async () => {
 
 el.video.addEventListener("play", () => (el.playPause.textContent = "Pause"));
 el.video.addEventListener("pause", () => (el.playPause.textContent = "Lecture"));
-el.video.addEventListener("timeupdate", renderSeek);
+el.video.addEventListener("timeupdate", () => {
+  renderSeek();
+  // The overlay depends on where the playhead is, so it has to update as the
+  // playhead moves — not once every two seconds when the manifest is polled.
+  if (state.manifest) renderStatus(state.manifest);
+});
 
 el.seek.addEventListener("input", () => {
   state.scrubbing = true;

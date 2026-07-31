@@ -51,7 +51,7 @@ const BUFFERED = 7;
 const $ = (id) => document.getElementById(id);
 const el = {
   presenceId: $("presenceId"), captureKey: $("captureKey"), devCreate: $("devCreate"),
-  setupHint: $("setupHint"), c1: $("c1"), c2: $("c2"), c3: $("c3"),
+  setupHint: $("setupHint"), setupLink: $("setupLink"), c1: $("c1"), c2: $("c2"), c3: $("c3"),
   preview: $("preview"), screenOff: $("screenOff"), screenToggle: $("screenToggle"),
   start: $("start"), stop: $("stop"), pause: $("pause"), rungLine: $("rungLine"),
   statCaptured: $("statCaptured"), statSent: $("statSent"), statBacklog: $("statBacklog"),
@@ -198,7 +198,15 @@ async function startCapture() {
     headers: { "content-type": "application/json", "x-elongo-key": state.captureKey },
     body: JSON.stringify({ mimeType: { v: videoMime, a: audioMime } }),
   });
-  if (!open.ok) return fail("Référence ou clé incorrecte.");
+  if (!open.ok) {
+    return fail(
+      open.status === 401
+        ? "Clé du correspondant incorrecte. Utilisez « créer un événement de démonstration » pour en obtenir une."
+        : "Référence inconnue. Vérifiez la référence de l'événement.",
+    );
+  }
+  rememberKey(state.presenceId, state.captureKey);
+  el.error.innerHTML = "";
 
   // Two recorders, mirroring the separate tracks in docs/06: audio is the
   // payload and must survive independently of the picture.
@@ -266,6 +274,19 @@ async function stopCapture() {
   el.stop.disabled = true;
   el.pause.disabled = true;
   el.start.disabled = false;
+
+  // Tell the server the camera has stopped. Without this the presence stays
+  // "live" forever, so the player keeps treating the archive as an ongoing
+  // broadcast and shows the correspondent's last live status over playback.
+  try {
+    await fetch(`/ingest/${encodeURIComponent(state.presenceId)}/close`, {
+      method: "POST",
+      headers: { "x-elongo-key": state.captureKey },
+    });
+  } catch {
+    // Offline at the moment of stopping: the drain loop below retries via
+    // /status, and the server promotes the presence once everything arrives.
+  }
 
   el.donePanel.hidden = false;
   await ensureViewerLink();
@@ -365,16 +386,21 @@ function priority(seg, nowSec) {
 }
 
 async function uploadLoop() {
-  while (state.running || state.finishing || state.backlogCount > 0) {
-    if (state.uploading) return;
-    state.uploading = true;
-    try {
-      await uploadPass();
-    } catch {
-      /* try again next pass */
+  if (state.uploading) return; // one loop only; a second caller just leaves
+  state.uploading = true;
+  try {
+    while (state.running || state.finishing || state.backlogCount > 0) {
+      try {
+        await uploadPass();
+      } catch {
+        /* transient; the next pass retries */
+      }
+      await new Promise((r) => setTimeout(r, 400));
     }
+  } finally {
+    // Without this the flag stays true after any throw and the loop can never
+    // be restarted — the client would go quiet for the rest of the event.
     state.uploading = false;
-    await new Promise((r) => setTimeout(r, 400));
   }
 }
 
@@ -389,6 +415,8 @@ async function uploadPass() {
     // The camera keeps rolling; only the network is gone. This is the whole
     // point of the design, and the demo switch that proves it.
     setRung(BUFFERED);
+    state.stableSec = 0;
+    render();
     return;
   }
 
@@ -633,17 +661,61 @@ el.screenToggle.addEventListener("change", () => setScreen(el.screenToggle.check
 
 el.devCreate.addEventListener("click", async () => {
   const id = el.presenceId.value.trim() || "demo";
-  const res = await fetch("/dev/presence", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id, eventName: "Mariage de Grace & Thierry" }),
-  });
-  const body = await res.json();
-  el.captureKey.value = body.captureKey;
-  const link = `${location.origin}/player.html?id=${encodeURIComponent(id)}&t=${encodeURIComponent(body.viewerToken)}`;
-  state.viewerLink = link;
-  el.setupHint.innerHTML = `Lien pour la famille : <a href="${link}" target="_blank" rel="noopener">ouvrir le lecteur</a>`;
+  try {
+    const res = await fetch("/dev/presence", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, eventName: "Mariage de Grace & Thierry" }),
+    });
+    if (!res.ok) return fail("Impossible de créer l'événement de démonstration.");
+    const body = await res.json();
+    el.captureKey.value = body.captureKey;
+    rememberKey(id, body.captureKey);
+    state.viewerLink =
+      `${location.origin}/player.html?id=${encodeURIComponent(id)}` +
+      `&t=${encodeURIComponent(body.viewerToken)}`;
+    // Write into a dedicated element rather than replacing setupHint's HTML,
+    // which used to destroy this very button — so it worked exactly once, and
+    // a reload left no way to recover the key.
+    el.setupLink.innerHTML =
+      `Lien pour la famille : <a href="${state.viewerLink}" target="_blank" rel="noopener">ouvrir le lecteur</a>`;
+  } catch (err) {
+    fail(`Impossible de créer l'événement : ${err.message}`);
+  }
 });
+
+/**
+ * Keys survive a reload.
+ *
+ * A correspondent whose browser reloads mid-event — Android is aggressive about
+ * this — must not be locked out of their own booking. The key is scoped to the
+ * reference so switching events does not silently reuse the wrong one.
+ */
+function rememberKey(id, key) {
+  try {
+    localStorage.setItem(`elongo.key.${id}`, key);
+  } catch {
+    /* private browsing; the field still holds it for this session */
+  }
+}
+
+function recallKey(id) {
+  try {
+    return localStorage.getItem(`elongo.key.${id}`) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function restoreKeyForReference() {
+  const id = el.presenceId.value.trim();
+  if (!id) return;
+  const saved = recallKey(id);
+  if (saved && !el.captureKey.value.trim()) el.captureKey.value = saved;
+}
+
+el.presenceId.addEventListener("change", restoreKeyForReference);
+restoreKeyForReference();
 
 setScreen(true);
 render();
