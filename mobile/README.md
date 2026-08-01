@@ -115,6 +115,7 @@ for exactly this reason: `react-native@0.81.0` was pinned where SDK 54 wants
 | `No code signing certificates are available`, no devicectl warning | Expo genuinely targeted a physical device, usually because one is plugged in or Wi-Fi-paired | `cd apps/viewer && npx expo run:ios --device`, choose a simulator |
 | `Using react-native@X instead of recommended @Y` | An offline version guess in this repo | `npm run fix` |
 | Pods fail to install at all | CocoaPods missing or stale | `brew install cocoapods`, then `npm run clean && npm run ios` |
+| `[Reanimated] Failed to validate worklets version` during `pod install` | Usually **not** a version mismatch. Reanimated resolves `react-native-worklets` upward from its own directory, so if the two land in different `node_modules` it cannot see the peer at all | `rm -rf node_modules apps/*/node_modules && npm install` from `mobile/`. `npm run doctor` reports which directory each is in. |
 | `Cannot find module './utils/autoAddConfigPlugins.js'` after `expo install` | Expo used a different package manager (usually bun) and reinstalled everything on top of the npm tree, moving `@expo/cli`'s own files mid-run | Delete the foreign lockfile, `rm -rf node_modules && npm install`. `npm run doctor` detects this. |
 
 **Native modules are pinned exactly, with no range operator.** `~0.5.1` resolved

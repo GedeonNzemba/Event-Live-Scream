@@ -39,14 +39,14 @@ const problems = [];
 const warnings = [];
 
 function ok(label, detail = "") {
-  console.log(`  ${green("OK")}    ${label.padEnd(38)}${dim(detail)}`);
+  console.log(`  ${green("OK")}    ${label.padEnd(48)}${dim(detail)}`);
 }
 function bad(label, detail, fix) {
-  console.log(`  ${red("FAIL")}  ${label.padEnd(38)}${dim(detail)}`);
+  console.log(`  ${red("FAIL")}  ${label.padEnd(48)}${dim(detail)}`);
   problems.push({ label, fix });
 }
 function warn(label, detail, fix) {
-  console.log(`  ${yellow("WARN")}  ${label.padEnd(38)}${dim(detail)}`);
+  console.log(`  ${yellow("WARN")}  ${label.padEnd(48)}${dim(detail)}`);
   warnings.push({ label, fix });
 }
 
@@ -275,6 +275,73 @@ if (foreignLocks.length === 0) {
         .map((f) => `rm "${f}"`)
         .join(" && ")} — then rm -rf node_modules && npm install.`,
   );
+}
+
+// --- 4d. Native peers must be hoisted together -----------------------------
+
+/**
+ * Reanimated resolves react-native-worklets from its own directory upward, and
+ * its podspec refuses to install if it cannot find a matching version:
+ *
+ *     [!] Invalid `RNReanimated.podspec` file:
+ *         [Reanimated] Failed to validate worklets version.
+ *
+ * In a workspace that reads as a version conflict. Usually it is not. If the two
+ * packages land in *different* node_modules — one hoisted to mobile/, the other
+ * nested under apps/viewer/ because something installed from inside that
+ * directory — then Reanimated is looking upward from mobile/node_modules and
+ * simply cannot see a copy that lives below it. The versions can both be correct
+ * and the build still fails.
+ *
+ * So this checks co-location and versions, and reports which one is wrong.
+ */
+const PEERS = [
+  ["react-native-reanimated", "react-native-worklets"],
+];
+
+function findPackage(name, from) {
+  let dir = from;
+  for (;;) {
+    const candidate = join(dir, "node_modules", name, "package.json");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+for (const [pkg, peer] of PEERS) {
+  const pkgPath = findPackage(pkg, join(root, "apps", "viewer"));
+  const peerPath = findPackage(peer, join(root, "apps", "viewer"));
+
+  if (!pkgPath || !peerPath) {
+    if (existsSync(localModules)) {
+      bad(
+        `${pkg} + ${peer}`,
+        !pkgPath ? `${pkg} not installed` : `${peer} not installed`,
+        "Run `npm install` from mobile/.",
+      );
+    }
+    continue;
+  }
+
+  const pkgRoot = dirname(dirname(dirname(pkgPath)));
+  const peerRoot = dirname(dirname(dirname(peerPath)));
+  const pkgVersion = JSON.parse(readFileSync(pkgPath, "utf8")).version;
+  const peerVersion = JSON.parse(readFileSync(peerPath, "utf8")).version;
+
+  if (pkgRoot !== peerRoot) {
+    bad(
+      `${pkg} + ${peer}`,
+      "split across node_modules",
+      `${pkg} is in ${pkgRoot}/node_modules and ${peer} is in ${peerRoot}/node_modules. ` +
+        `${pkg} resolves its peer upward from its own directory, so it cannot see one nested ` +
+        "below it, and pod install fails claiming a version mismatch that is not real. " +
+        "Fix: rm -rf node_modules apps/*/node_modules && npm install, from mobile/.",
+    );
+  } else {
+    ok(`${pkg} + ${peer}`, `${pkgVersion} + ${peerVersion}, co-located`);
+  }
 }
 
 // mobile/App.tsx is the signpost Expo lands on when started from the wrong
