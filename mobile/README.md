@@ -111,7 +111,8 @@ for exactly this reason: `react-native@0.81.0` was pinned where SDK 54 wants
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `cp: framework/packages/react-native/..: File exists` during `pod install` | React Native 0.81 ships iOS dependencies as a precompiled `ReactNativeDependencies.xcframework`; its copy step fails on leftover native state, and on 0.81.0 specifically | `npm run clean && npm run fix && npm run ios` |
-| `No code signing certificates are available` | Expo targeted a *physical* device — usually because one is plugged in | Pick a simulator: `cd apps/viewer && npx expo run:ios --device` and choose one from the list |
+| `No code signing certificates are available` **and** `Unexpected devicectl JSON version output` | Expo's SDK 54 CLI cannot parse Xcode 26's `devicectl`, so it cannot tell a simulator from a physical device and asks for a certificate you do not need | Build from Xcode: `npm run xcode` (see below). The real fix is Expo SDK 57. |
+| `No code signing certificates are available`, no devicectl warning | Expo genuinely targeted a physical device, usually because one is plugged in or Wi-Fi-paired | `cd apps/viewer && npx expo run:ios --device`, choose a simulator |
 | `Using react-native@X instead of recommended @Y` | An offline version guess in this repo | `npm run fix` |
 | Pods fail to install at all | CocoaPods missing or stale | `brew install cocoapods`, then `npm run clean && npm run ios` |
 | `Cannot find module './utils/autoAddConfigPlugins.js'` after `expo install` | Expo used a different package manager (usually bun) and reinstalled everything on top of the npm tree, moving `@expo/cli`'s own files mid-run | Delete the foreign lockfile, `rm -rf node_modules && npm install`. `npm run doctor` detects this. |
@@ -129,6 +130,36 @@ stray `bun.lock`, `yarn.lock` or `pnpm-lock.yaml` anywhere in the workspace make
 npm one. The result is not a clean switch but a hybrid `node_modules`, and the
 errors it produces name internal Expo paths that look like Expo bugs. Both `fix`
 scripts pass `--npm` explicitly for this reason.
+
+### Building from Xcode when the Expo CLI cannot
+
+On Xcode 26, Expo's SDK 54 CLI fails to parse `xcrun devicectl`'s output. It
+announces this — *"Unexpected devicectl JSON version output from devicectl"* —
+and then, unable to distinguish a simulator from a phone, refuses to build
+without a code-signing certificate. You can select a simulator from its own list
+and it will still demand one.
+
+Xcode has no such confusion, so drive it directly:
+
+```bash
+# terminal 1 — the bundler
+cd mobile/apps/viewer && npx expo start --dev-client
+
+# terminal 2 — the build
+cd mobile && npm run xcode          # opens ios/*.xcworkspace
+```
+
+In Xcode: pick a simulator in the scheme selector, press ⌘R. Nothing needs
+signing for a simulator, which is exactly the fact the CLI has lost track of.
+
+Prebuild must have run at least once for `ios/` to exist — `npm run ios` gets far
+enough to generate it even when it fails at the signing step, so if you have seen
+that error you already have the directory.
+
+**The real fix is Expo SDK 57**, which this repository was planned around
+([docs/12](../docs/12-mobile-apps.md)) but which was pinned back to 54 while the
+scaffold was written offline. 57 carries the Xcode 26 support. That upgrade is
+its own piece of work and has not been done yet.
 
 `npm run clean` removes the generated `ios/`, `android/` and `.expo` directories
 in both apps. They are build output, not source, and a half-finished prebuild
