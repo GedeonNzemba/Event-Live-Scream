@@ -131,6 +131,47 @@ npm one. The result is not a clean switch but a hybrid `node_modules`, and the
 errors it produces name internal Expo paths that look like Expo bugs. Both `fix`
 scripts pass `--npm` explicitly for this reason.
 
+### Xcode 26 and React Native 0.81's precompiled iOS artifacts
+
+React Native 0.81 stopped compiling its iOS dependencies from source and started
+shipping them as prebuilt binaries — `ReactNativeDependencies.xcframework` and a
+prebuilt `hermes-engine`. That is where 0.81's advertised faster iOS builds come
+from, and Xcode 26 rejects them. The symptom is two script phases failing with
+no useful message:
+
+```
+ReactNativeDependencies   Command PhaseScriptExecution failed with a nonzero exit code
+hermes-engine             Command PhaseScriptExecution failed with a nonzero exit code
+```
+
+Two fixes, addressing different halves; the repository applies both.
+
+`apps/viewer/plugins/withXcode26.js` sets `SWIFT_ENABLE_EXPLICIT_MODULES = NO`
+on every Pods target. Xcode 26 turned explicit modules on by default and the
+prebuilt frameworks were not built for it. It is a **config plugin** rather than
+a note here because `ios/` is generated — anything edited there by hand is
+destroyed by the next `expo prebuild`, and a fix that must be reapplied after
+every `npm run clean` is a recurring tax, not a fix.
+
+`npm run pods` reinstalls with `RCT_USE_RN_DEP=0 RCT_USE_PREBUILT_RNCORE=0`,
+which falls back to compiling from source — what every React Native before 0.81
+did. Slower to build, known to work.
+
+```bash
+npm run clean       # drop the ios/ built against the prebuilt artifacts
+npm run ios         # regenerates ios/ with the plugin applied; may still fail at signing
+npm run pods        # reinstall pods from source
+npm run xcode       # then ⌘R
+```
+
+**Upgrading Expo will not obviously help.** SDK 57 brings React Native 0.82/0.83,
+which have their own [Xcode 26 build failures](https://github.com/react-native-community/discussions-and-proposals/discussions/978).
+This is a toolchain-transition problem, not a stale-version problem, so the fix
+is to stop using the prebuilt path rather than to chase versions.
+
+Delete the plugin once the toolchain settles. It exists for one specific
+pairing — SDK 54 / RN 0.81.x against Xcode 26 — and should not outlive it.
+
 ### Building from Xcode when the Expo CLI cannot
 
 On Xcode 26, Expo's SDK 54 CLI fails to parse `xcrun devicectl`'s output. It

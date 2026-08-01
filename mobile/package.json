@@ -21,6 +21,7 @@
     "fix": "npm run --workspace=@elongo/viewer fix && npm run --workspace=@elongo/correspondent fix",
     "clean": "rm -rf apps/*/ios apps/*/android apps/*/.expo && echo 'Native directories removed. Re-run npm run ios / npm run android.'",
     "xcode": "open apps/viewer/ios/*.xcworkspace",
-    "xcode:correspondent": "open apps/correspondent/android"
+    "xcode:correspondent": "open apps/correspondent/android",
+    "pods": "cd apps/viewer/ios && RCT_USE_RN_DEP=0 RCT_USE_PREBUILT_RNCORE=0 USE_HERMES=1 pod install"
   }
 }

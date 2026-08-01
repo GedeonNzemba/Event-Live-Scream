@@ -58,7 +58,8 @@
       "expo-router",
       "expo-font",
       "expo-video",
-      "expo-notifications"
+      "expo-notifications",
+      "./plugins/withXcode26"
     ],
     "experiments": {
       "typedRoutes": true
