@@ -244,6 +244,18 @@ for (const [label, dir] of [
   }
 }
 
+// mobile/App.tsx is the signpost Expo lands on when started from the wrong
+// directory. Losing it turns a readable screen back into a stack trace.
+if (existsSync(join(root, "App.tsx"))) {
+  ok("wrong-directory signpost", "mobile/App.tsx");
+} else {
+  warn(
+    "wrong-directory signpost",
+    "mobile/App.tsx missing",
+    "Starting Expo from mobile/ will fail with an unexplained 'Unable to resolve ../../App'.",
+  );
+}
+
 // --- 5. Fonts --------------------------------------------------------------
 
 const FONTS = [
