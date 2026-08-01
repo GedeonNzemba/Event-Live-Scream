@@ -17,6 +17,8 @@
     "fonts": "node scripts/fetch-fonts.mjs",
     "ios": "npm run --workspace=@elongo/viewer ios",
     "android": "npm run --workspace=@elongo/correspondent android",
-    "setup": "npm install && npm run fonts && npm run doctor"
+    "setup": "npm install && npm run fonts && npm run doctor",
+    "fix": "npm run --workspace=@elongo/viewer fix && npm run --workspace=@elongo/correspondent fix",
+    "clean": "rm -rf apps/*/ios apps/*/android apps/*/.expo && echo 'Native directories removed. Re-run npm run ios / npm run android.'"
   }
 }

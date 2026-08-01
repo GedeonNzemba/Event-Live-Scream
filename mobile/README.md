@@ -98,6 +98,27 @@ npx expo install --check  # reconcile the offline version guesses with your SDK
 npx expo run:ios          # a development build — see below
 ```
 
+### Troubleshooting the first build
+
+**`npm run fix` before anything else if a build fails.** Every version in
+`apps/*/package.json` was written offline, without an Expo SDK to check against.
+`expo install --fix` rewrites them all to what the installed SDK actually wants,
+and it is the authority here — not this repository. The first iOS build failed
+for exactly this reason: `react-native@0.81.0` was pinned where SDK 54 wants
+`0.81.5`, and 0.81.0's precompiled-iOS-dependencies script fails during
+`pod install`.
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `cp: framework/packages/react-native/..: File exists` during `pod install` | React Native 0.81 ships iOS dependencies as a precompiled `ReactNativeDependencies.xcframework`; its copy step fails on leftover native state, and on 0.81.0 specifically | `npm run clean && npm run fix && npm run ios` |
+| `No code signing certificates are available` | Expo targeted a *physical* device — usually because one is plugged in | Pick a simulator: `cd apps/viewer && npx expo run:ios --device` and choose one from the list |
+| `Using react-native@X instead of recommended @Y` | An offline version guess in this repo | `npm run fix` |
+| Pods fail to install at all | CocoaPods missing or stale | `brew install cocoapods`, then `npm run clean && npm run ios` |
+
+`npm run clean` removes the generated `ios/`, `android/` and `.expo` directories
+in both apps. They are build output, not source, and a half-finished prebuild
+leaves state that the next attempt trips over rather than replaces.
+
 **Starting Expo from `mobile/` or the repository root fails in a way that names
 the wrong thing.** Expo takes its entry point from the `main` field of whatever
 directory it considers the project. Neither of those has one, so it falls back to
