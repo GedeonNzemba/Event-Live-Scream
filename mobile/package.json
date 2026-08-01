@@ -11,12 +11,12 @@
   },
   "scripts": {
     "test": "node --test \"packages/*/test/**/*.test.ts\"",
-    "correspondent": "npm run start --workspace @elongo/correspondent",
-    "viewer": "npm run start --workspace @elongo/viewer",
+    "correspondent": "npm run --workspace=@elongo/correspondent start",
+    "viewer": "npm run --workspace=@elongo/viewer start",
     "doctor": "node scripts/doctor.mjs",
     "fonts": "node scripts/fetch-fonts.mjs",
-    "ios": "npm run ios --workspace @elongo/viewer",
-    "android": "npm run android --workspace @elongo/correspondent",
+    "ios": "npm run --workspace=@elongo/viewer ios",
+    "android": "npm run --workspace=@elongo/correspondent android",
     "setup": "npm install && npm run fonts && npm run doctor"
   }
 }

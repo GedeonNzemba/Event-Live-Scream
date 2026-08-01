@@ -201,6 +201,49 @@ for (const app of ["correspondent", "viewer"]) {
   }
 }
 
+// --- 4b. The entry point ---------------------------------------------------
+
+/**
+ * Expo picks its entry point from the `main` field of whichever package.json it
+ * considers the project root. When `main` is absent it silently falls back to
+ * the legacy `expo/AppEntry`, which imports `../../App` — a file this project
+ * has never had, because it uses expo-router.
+ *
+ * The resulting error names expo/AppEntry.js and ../../App, neither of which
+ * appears anywhere in this repository, so it reads like a broken Expo install.
+ * The real meaning is: *you started Expo from a directory that is not an app*.
+ * mobile/, the repository root and the top-level app/ all qualify — none of them
+ * has a `main`.
+ */
+for (const app of ["correspondent", "viewer"]) {
+  const pkg = JSON.parse(readFileSync(join(root, "apps", app, "package.json"), "utf8"));
+  if (pkg.main !== "expo-router/entry") {
+    bad(
+      `${app}: entry point`,
+      `main is ${pkg.main ?? "unset"}`,
+      `apps/${app}/package.json must set "main": "expo-router/entry".`,
+    );
+  } else {
+    ok(`${app}: entry point`, "expo-router/entry");
+  }
+}
+
+for (const [label, dir] of [
+  ["mobile/", root],
+  ["repository root", repo],
+]) {
+  const pkgPath = join(dir, "package.json");
+  if (!existsSync(pkgPath)) continue;
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+  if (pkg.main) {
+    warn(
+      `${label} looks like an app`,
+      `main is ${pkg.main}`,
+      `${label} is not an Expo app and should not declare main.`,
+    );
+  }
+}
+
 // --- 5. Fonts --------------------------------------------------------------
 
 const FONTS = [
@@ -250,11 +293,16 @@ console.log(dim(`\n  ${"─".repeat(70)}`));
 
 if (problems.length === 0 && warnings.length === 0) {
   console.log(green(bold("  Ready.")));
-  console.log(dim("\n  cd apps/viewer && npx expo run:ios"));
-  console.log(dim("  cd apps/correspondent && npx expo run:android\n"));
-  console.log(dim("  Expo Go cannot load this project — expo-video, Skia, VisionCamera and"));
-  console.log(dim("  expo-sqlite are all native modules it does not ship. Use run:ios/run:android,"));
-  console.log(dim("  which build a development client, then `npx expo start --dev-client`.\n"));
+  console.log(dim("\n  From mobile/ — these route to the right workspace on their own:\n"));
+  console.log(dim("      npm run ios          the viewer, iOS"));
+  console.log(dim("      npm run android      the correspondent, Android\n"));
+  console.log(dim("  Running Expo by hand means cd-ing into an app directory first. Starting it"));
+  console.log(dim("  from mobile/ or from the repository root makes Expo treat that directory as"));
+  console.log(dim("  the project, fall back to its legacy entry point, and fail on a missing"));
+  console.log(dim("  ../../App — a file this project has never had.\n"));
+  console.log(dim("  Expo Go cannot load this project either: expo-video, Skia, VisionCamera and"));
+  console.log(dim("  expo-sqlite are native modules it does not ship. run:ios/run:android build a"));
+  console.log(dim("  development client; after that `npx expo start --dev-client` attaches to it.\n"));
 } else {
   if (problems.length > 0) {
     console.log(red(bold(`  ${problems.length} problem(s):\n`)));

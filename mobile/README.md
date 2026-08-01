@@ -79,7 +79,15 @@ after that names paths belonging to an unrelated project.
 which `expo` binary npx would actually run; if that path is not inside this
 repository, nothing else in the output matters until it is.
 
-Then, per app:
+Then, still from `mobile/` — these route to the right workspace themselves, which
+is the point:
+
+```bash
+npm run ios         # the viewer, iOS
+npm run android     # the correspondent, Android
+```
+
+By hand, `cd` into an app directory first:
 
 ```bash
 cd apps/viewer            # iOS + Android
@@ -89,6 +97,18 @@ cd apps/correspondent     # Android only
 npx expo install --check  # reconcile the offline version guesses with your SDK
 npx expo run:ios          # a development build — see below
 ```
+
+**Starting Expo from `mobile/` or the repository root fails in a way that names
+the wrong thing.** Expo takes its entry point from the `main` field of whatever
+directory it considers the project. Neither of those has one, so it falls back to
+the legacy `expo/AppEntry`, which imports `../../App`:
+
+```
+Unable to resolve "../../App" from "node_modules/expo/AppEntry.js"
+```
+
+This project has never had an `App` file — it uses expo-router, and both apps set
+`"main": "expo-router/entry"`. The error means *wrong directory*, nothing more.
 
 **`npm run fonts` is not optional.** `_layout.tsx` requires the five font files
 by path and Metro resolves that at bundle time, so a missing file gives you the
