@@ -116,6 +116,12 @@ for exactly this reason: `react-native@0.81.0` was pinned where SDK 54 wants
 | Pods fail to install at all | CocoaPods missing or stale | `brew install cocoapods`, then `npm run clean && npm run ios` |
 | `Cannot find module './utils/autoAddConfigPlugins.js'` after `expo install` | Expo used a different package manager (usually bun) and reinstalled everything on top of the npm tree, moving `@expo/cli`'s own files mid-run | Delete the foreign lockfile, `rm -rf node_modules && npm install`. `npm run doctor` detects this. |
 
+**Native modules are pinned exactly, with no range operator.** `~0.5.1` resolved
+to `0.5.2` and `^2.0.0` to `2.10.1`, and Expo rejected both. A native module's
+version is decided by the SDK it links against, not by semver goodwill, so a
+range there is a bug waiting for an upstream publish to trigger it. Expo's own
+`expo-*` packages keep their `~` — those are versioned with the SDK and safe.
+
 **One package manager, always npm.** Expo picks a package manager by sniffing
 for lockfiles, and its choice overrides whatever actually built the tree. A
 stray `bun.lock`, `yarn.lock` or `pnpm-lock.yaml` anywhere in the workspace makes
