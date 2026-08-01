@@ -10,7 +10,7 @@
     "android": "expo run:android",
     "prebuild": "expo prebuild --clean",
     "lint": "expo lint",
-    "fix": "expo install --fix"
+    "fix": "expo install --fix --npm"
   },
   "dependencies": {
     "@elongo/api": "*",

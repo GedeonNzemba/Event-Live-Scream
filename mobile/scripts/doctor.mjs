@@ -244,6 +244,39 @@ for (const [label, dir] of [
   }
 }
 
+// --- 4c. One package manager, not two -------------------------------------
+
+/**
+ * Expo picks a package manager by sniffing for lockfiles, and it wins over
+ * whatever actually built the tree. A stray bun.lock, yarn.lock or
+ * pnpm-lock.yaml anywhere in the workspace means `expo install` reinstalls all
+ * ~1600 packages in that manager's layout, on top of an npm tree.
+ *
+ * The result is not a clean switch. It is a hybrid node_modules in which
+ * @expo/cli's own files have moved underneath it mid-run, producing errors like
+ * "Cannot find module './utils/autoAddConfigPlugins.js'" — an internal path that
+ * looks like a bug in Expo and is really two package managers disagreeing.
+ */
+const LOCKFILES = ["bun.lock", "bun.lockb", "yarn.lock", "pnpm-lock.yaml"];
+const foreignLocks = [];
+for (const dir of [root, ...["correspondent", "viewer"].map((a) => join(root, "apps", a))]) {
+  for (const lock of LOCKFILES) {
+    if (existsSync(join(dir, lock))) foreignLocks.push(join(dir, lock));
+  }
+}
+if (foreignLocks.length === 0) {
+  ok("one package manager", "npm only");
+} else {
+  bad(
+    "one package manager",
+    foreignLocks.map((f) => f.slice(root.length + 1)).join(", "),
+    "This repository is an npm workspace. Another manager's lockfile makes `expo install` " +
+      `reinstall everything in that manager's layout on top of the npm tree. Remove: ${foreignLocks
+        .map((f) => `rm "${f}"`)
+        .join(" && ")} — then rm -rf node_modules && npm install.`,
+  );
+}
+
 // mobile/App.tsx is the signpost Expo lands on when started from the wrong
 // directory. Losing it turns a readable screen back into a stack trace.
 if (existsSync(join(root, "App.tsx"))) {

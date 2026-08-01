@@ -114,6 +114,15 @@ for exactly this reason: `react-native@0.81.0` was pinned where SDK 54 wants
 | `No code signing certificates are available` | Expo targeted a *physical* device — usually because one is plugged in | Pick a simulator: `cd apps/viewer && npx expo run:ios --device` and choose one from the list |
 | `Using react-native@X instead of recommended @Y` | An offline version guess in this repo | `npm run fix` |
 | Pods fail to install at all | CocoaPods missing or stale | `brew install cocoapods`, then `npm run clean && npm run ios` |
+| `Cannot find module './utils/autoAddConfigPlugins.js'` after `expo install` | Expo used a different package manager (usually bun) and reinstalled everything on top of the npm tree, moving `@expo/cli`'s own files mid-run | Delete the foreign lockfile, `rm -rf node_modules && npm install`. `npm run doctor` detects this. |
+
+**One package manager, always npm.** Expo picks a package manager by sniffing
+for lockfiles, and its choice overrides whatever actually built the tree. A
+stray `bun.lock`, `yarn.lock` or `pnpm-lock.yaml` anywhere in the workspace makes
+`expo install` reinstall ~1600 packages in *that* manager's layout on top of the
+npm one. The result is not a clean switch but a hybrid `node_modules`, and the
+errors it produces name internal Expo paths that look like Expo bugs. Both `fix`
+scripts pass `--npm` explicitly for this reason.
 
 `npm run clean` removes the generated `ios/`, `android/` and `.expo` directories
 in both apps. They are build output, not source, and a half-finished prebuild
